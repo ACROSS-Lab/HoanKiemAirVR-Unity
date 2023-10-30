@@ -13,13 +13,18 @@ public class MoveHorizontal : InputData
     [SerializeField] private float speed = 2.0f;
     [SerializeField] private float speedRotation = 10.0f;
     [SerializeField] private bool Strafe = false;
-
     [SerializeField] private InputActionReference stick;
 
+    // ############################################################
    
     private void FixedUpdate()
     {
-        // Read value from the joystick
+        if (GameManager.Instance.IsState(GameState.GAME)) MoveHorizontally();
+    }
+
+    // ############################################################
+
+    private void MoveHorizontally() {
         Vector2 val = stick.action.ReadValue<Vector2>();
         Vector3 vectF = Camera.main.transform.forward;
         vectF.y = 0;
@@ -39,6 +44,5 @@ public class MoveHorizontal : InputData
 
            transform.Rotate(new Vector3(0,1,0), Time.fixedDeltaTime * speedRotation * val.x);
         }
-
     }
 }

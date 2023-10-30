@@ -48,7 +48,7 @@ public abstract class TCPConnector : MonoBehaviour
 
     protected void ListenForData() {
         try {
-            socketConnection = new TcpClient(ip, port);
+            socketConnection = new TcpClient(PlayerPrefs.GetString("IP"), port);
             SendMessageToServer("connected");
             Byte[] bytes = new Byte[1024];
             string fullMessage = "";
@@ -117,6 +117,11 @@ public abstract class TCPConnector : MonoBehaviour
 
     public static void SetClientReceiveThread(Thread thread) {
         clientReceiveThread = thread;
+    }
+
+    public static void ResetConnection() {
+        socketConnection = null;
+        clientReceiveThread = null;
     }
 
 

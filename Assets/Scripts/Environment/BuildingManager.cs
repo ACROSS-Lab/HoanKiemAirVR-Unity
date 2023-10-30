@@ -3,39 +3,50 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.Threading;
 
-public class BuildingManager : MonoBehaviour
+public class BuildingManager : GameListener
 {
 
     [SerializeField] private Material buildingMaterial;
-    private static float blendingCoefficient = 0.1f;
-    private static bool buildingsHandled;
-    private bool buildingsInitialized;
+
+    private float blendingCoefficient = 0.1f;
+    private bool buildingsHandled;
     private Dictionary<int, GameObject> buildingsMap;
+    
+    public static BuildingManager Instance = null;
+
+    // ############################################################
+
+    void Awake() {
+        Instance = this;
+    }
 
     void Start()
     {
         buildingsHandled = false;
-        buildingsInitialized = false;
     }
 
     void Update()
     {
-        if (!buildingsInitialized) InitBuildings();
-        // if (!buildingsHandled) HandleBuildings();
+        if (!buildingsHandled && GameManager.Instance.IsState(GameState.PENDING)) InitBuildings();
     }
 
+    // ############################################################
+
+    protected override void HandleGamaData(WorldJSONInfo infoWorld) {
+        UpdateBuildingsPollution(infoWorld, buildingsMap);
+    }
+
+    protected override void HandleGameStateChanged(GameState state) { }
+
+
+
+    // ############################################################
+
     private void InitBuildings() {
-        // buildings = GameObject.FindGameObjectsWithTag("Building");
-        if (PolygonGenerator.GetGeneratedBuildings() != null) {
-            buildingsMap = PolygonGenerator.GetGeneratedBuildings();
-            Debug.Log(buildingsMap.Count.ToString() + " buildings initialized");
-            buildingsInitialized = true;
+        if (PolygonGenerator.GetInstance().GetGeneratedBuildings() != null) {
+            buildingsMap = PolygonGenerator.GetInstance().GetGeneratedBuildings();
             HandleBuildings();
         }
-        // if (buildings.Length > 0) {
-        //     buildingsInitialized = true;
-        //     Debug.Log(buildings.Length.ToString() + " buildings initialized");
-        // }
     }
 
     private void HandleBuildings() {
@@ -43,9 +54,7 @@ public class BuildingManager : MonoBehaviour
         List<int> ids = new List<int>();
         foreach (var entry in buildingsMap) {
             building = entry.Value;
-            // if (InLakeArea(building) || OutOfMap(building) || OutOfMap2(building) || OutOfMap3(building)) { // Destroy buildings polygons in the lake area
             if (InLakeArea(building) || OutOfMap(building)) { // Destroy buildings polygons in the lake area
-                // buildingsMap.Remove(id);
                 ids.Add(entry.Key);
             } else {
                 if (building.TryGetComponent(out LineRenderer lineRenderer)) {
@@ -63,10 +72,10 @@ public class BuildingManager : MonoBehaviour
             buildingsMap.Remove(id);
         }
         buildingsHandled = true;
-        Debug.Log("Buildings handled");
+        Debug.Log("Buildings handled"); 
     }
 
-    public static void UpdateBuildingsPollution(WorldJSONInfo infoWorld, Dictionary<int, GameObject> buildings) {
+    public void UpdateBuildingsPollution(WorldJSONInfo infoWorld, Dictionary<int, GameObject> buildings) {
         float previousPollution;
         float alpha;
         foreach (BuildingInfo bi in infoWorld.buildings)
@@ -76,8 +85,6 @@ public class BuildingManager : MonoBehaviour
             GameObject building = null;
             if (buildings.TryGetValue(id, out building))
             {
-                // building = buildings[id];
-                // Change "pollution" property of the building material
                 if(building != null) {
                     foreach (Transform childTransform in building.transform) {
                         GameObject child = childTransform.gameObject;
@@ -91,7 +98,6 @@ public class BuildingManager : MonoBehaviour
         }
     }
 
-    // DESTROY BUILDINGS in AREA (595,-855);(650,-650)
     private bool InLakeArea(GameObject building) {
         Vector3 pos = building.transform.position;
         return (pos.x >= 595 && pos.x <= 650 && pos.z >= -855 && pos.z <= -650);
@@ -109,28 +115,10 @@ public class BuildingManager : MonoBehaviour
         return pos.z < a * pos.x + b;
     }
 
-    private bool OutOfMap2(GameObject building) {
-        Vector3 pos = building.transform.position;
-        float xa = 324;
-        float ya = -178;
-        float xb = 128;
-        float yb = -1213;
-        
-        float a = (yb-ya)/(xb - xa);
-        float b = ya - a * xa;
-        return pos.z > a * pos.x + b;
-    }
+    // ############################################################
 
-    private bool OutOfMap3(GameObject building) {
-        Vector3 pos = building.transform.position;
-        float xa = 307;
-        float ya = -368;
-        float xb = 652;
-        float yb = -290;
-        
-        float a = (yb-ya)/(xb - xa);
-        float b = ya - a * xa;
-        return pos.z > a * pos.x + b;
+    public bool AreBuildingsHandled() {
+        return buildingsHandled;
     }
     
 }

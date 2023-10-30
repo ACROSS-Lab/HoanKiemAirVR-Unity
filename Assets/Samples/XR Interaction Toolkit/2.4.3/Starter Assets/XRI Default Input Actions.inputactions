@@ -701,6 +701,15 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": true
+                },
+                {
+                    "name": "Open IP Menu",
+                    "type": "Button",
+                    "id": "f426e59b-bfcc-4796-9993-e01c5269d810",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
                 }
             ],
             "bindings": [
@@ -844,6 +853,17 @@
                     "processors": "",
                     "groups": "Generic XR Controller",
                     "action": "UI Scroll",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "f93db759-d461-4fee-87cf-936e62ffc0f6",
+                    "path": "<XRController>{LeftHand}/secondaryButton",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Open IP Menu",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }
@@ -1792,7 +1812,7 @@
                 {
                     "name": "",
                     "id": "1eece6be-3d46-47c5-9482-df36ac459acf",
-                    "path": "<XRController>{RightHand}/gripButton",
+                    "path": "<XRController>{RightHand}/primaryButton",
                     "interactions": "",
                     "processors": "",
                     "groups": "",

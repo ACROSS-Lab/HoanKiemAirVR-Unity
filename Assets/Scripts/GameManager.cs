@@ -2,29 +2,42 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
+using Unity.Collections;
 
 public class GameManager : MonoBehaviour
 {
 
     [SerializeField] private TMPro.TextMeshProUGUI infoText;
+    [SerializeField] private GameState currentState;
 
     public static GameManager Instance = null;
     public static event Action<GameState> OnGameStateChanged;
-    public GameState currentState;
+    public static event Action OnGameRestarted;
 
     private Timer timer;
     private float minSimulationDuration;
 
+    // ############################################################
+
     void Awake() {
         Instance = this;
-        timer = GetComponent<Timer>();
     }
 
     void Start() {
+        timer = GetComponent<Timer>();
+        minSimulationDuration = 10f;
         UpdateState(GameState.MENU);
         RemoveInfoText();
-        minSimulationDuration = 10f;
     }
+
+    void Update() {
+        if (RoadManager.Instance.AreRoadsInitialized() && BuildingManager.Instance.AreBuildingsHandled() && currentState == GameState.PENDING) {
+            UpdateState(GameState.GAME);
+        }
+    }
+
+    // ############################################################
     
     public void UpdateState(GameState newState) {
         currentState = newState;
@@ -44,18 +57,17 @@ public class GameManager : MonoBehaviour
             case GameState.CRASH:
                 HandleCrashState();
                 break;
+            case GameState.PENDING:
+                HandlePendingState();
+                break;
+            
         }
-
-        
     }
 
-    public bool IsState(GameState state) {
-        return currentState == state;
-    }
+    // ############################## HANDLERS ##############################
+    
 
-    private void HandleMenuState() {
-
-    }
+    private void HandleMenuState() { }
 
     private void HandleGameState() {
         RemoveInfoText();
@@ -64,10 +76,17 @@ public class GameManager : MonoBehaviour
 
     private void HandleEndState() {
         timer.SetTimerRunning(false);
+        TCPConnector.GetSocketConnection().Close(); 
+        TCPConnector.GetClientReceiveThread().Abort();
+        TCPConnector.ResetConnection();
     }
 
     private void HandleCrashState() {
         timer.Reset();
+    }
+    
+    private void HandlePendingState() {
+        RemoveInfoText();
     }
 
     public void DisplayInfoText(string text, Color color) {
@@ -77,22 +96,35 @@ public class GameManager : MonoBehaviour
 
     public void RemoveInfoText() {
         DisplayInfoText("", new Color(0,0,0,0));
+    }    
+
+    public void RestartGame() {
+        OnGameRestarted?.Invoke();        
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 
-    public Timer GetTimer() {
-        return timer;
+    // ############################################################
+
+    public bool IsState(GameState state) {
+        return currentState == state;
     }
+    
+    public Timer GetTimer() {
+    return timer;
+    }   
 
     public float GetMinSimulationDuration() {
         return minSimulationDuration;
     }
-
 }
+
+// ############################################################
 
 public enum GameState {
     MENU,
     GAME,
     END,
-    CRASH
+    CRASH,
+    PENDING // Waiting for incoming init data from GAMA
 }
 

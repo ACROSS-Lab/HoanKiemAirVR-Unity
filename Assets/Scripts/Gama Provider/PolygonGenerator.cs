@@ -7,14 +7,29 @@ public class PolygonGenerator
 {
     CoordinateConverter converter;
     float offsetYBackgroundGeom;
-    private static Dictionary<int, GameObject> buildingsMap;
+    private Dictionary<int, GameObject> buildingsMap;
 
-    public PolygonGenerator(CoordinateConverter c, float Yoffset)
-    {
+    private static PolygonGenerator instance;
+
+    private PolygonGenerator() {}
+
+    public void Init(CoordinateConverter c, float Yoffset) {
         converter = c;
         offsetYBackgroundGeom = Yoffset;
         buildingsMap = new Dictionary<int, GameObject>();
     }
+
+    public static PolygonGenerator GetInstance() {
+        if (instance == null) {
+            instance = new PolygonGenerator();
+        }
+        return instance;
+    }
+
+    public static void DestroyInstance() {
+        instance = null;
+    }
+
     public void GeneratePolygons(GAMAGeometry geom)
     {
         GameObject generated = new GameObject();
@@ -94,10 +109,15 @@ public class PolygonGenerator
 
     }
 
-    public static Dictionary<int, GameObject> GetGeneratedBuildings()
+    public Dictionary<int, GameObject> GetGeneratedBuildings()
     {
         return buildingsMap;
     }
+
+    // public static void SetGeneratedBuildings(Dictionary<int, GameObject> buildings)
+    // {
+    //     buildingsMap = buildings;
+    // }
 }
 
 

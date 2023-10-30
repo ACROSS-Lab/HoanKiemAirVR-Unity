@@ -10,7 +10,7 @@ public class WorldJSONInfo
     public List<int> position;
     public int pollution;
     public float aqimean;
-    public float aqimax;
+    // public float aqimax;
     public float aqistd;
     public float roadClosedDist;
     public float pAreaHigh;

@@ -16,6 +16,13 @@ public class MoveVertical  : InputData
    
     private void FixedUpdate()
     {
+        if (GameManager.Instance.IsState(GameState.GAME))
+        {
+            MoveVertially();
+        }
+    }
+
+    private void MoveVertially() {
         InputDevice hand = RightHand ? _rightController : _leftController;
         Vector2 val;
         hand.TryReadAxis2DValue(stick, out val);

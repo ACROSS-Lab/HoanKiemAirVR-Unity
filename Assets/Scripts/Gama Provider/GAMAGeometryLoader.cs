@@ -51,7 +51,11 @@ public class GAMAGeometryLoader : TCPConnector
         {
             Debug.Log("ici:" + converter);
 
-            if (polyGen == null) polyGen = new PolygonGenerator(converter, offsetYBackgroundGeom);
+            if (polyGen == null) {
+                polyGen = PolygonGenerator.GetInstance();
+                polyGen.Init(converter, offsetYBackgroundGeom);
+                
+            }
             polyGen.GeneratePolygons(geoms);
             continueProcess = false;
         }

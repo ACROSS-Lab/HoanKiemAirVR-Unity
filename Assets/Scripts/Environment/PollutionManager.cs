@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System;
 using UnityEngine;
 
-public class PollutionManager : GAMAListener
+public class PollutionManager : GameListener
 {
     
     [SerializeField] private GameObject fogPlane;
@@ -24,9 +24,10 @@ public class PollutionManager : GAMAListener
 
     public static PollutionManager Instance = null;
 
-
     // Fog gets always displayed even though pollution level is 0
     private float fogDisplayOffset;   
+
+    // ############################################################
 
     void Awake() {
         Instance = this;
@@ -42,7 +43,6 @@ public class PollutionManager : GAMAListener
     // Update is called once per frame
     void Update()
     {
-        // fogMaterial = fogPlane.GetComponent<MeshRenderer>().material;
         if (transform.position.y > fadeStartingHeight) {
             float x = (transform.position.y - fadeStartingHeight) / (fadeEndingHeight - fadeStartingHeight);
             float maxAlpha = fogMaterial.GetFloat("_Color_Alpha");
@@ -51,9 +51,24 @@ public class PollutionManager : GAMAListener
         previousAlpha = fogMaterial.GetFloat("_Color_Alpha");
         float currentAlpha = (((float) pollutionLevel) / maxPollutionLevel) * 1.68f;
         fogMaterial.SetFloat("_Color_Alpha", blendingCoef * previousAlpha + (1 - blendingCoef) * currentAlpha + fogDisplayOffset);
-
-
     }
+    
+    // ############################################################
+
+    protected override void HandleGamaData(WorldJSONInfo data) {
+        SetFogPollutionLevel(data.pollution);
+        SetAQIMean(data.aqimean);
+        SetAQIStd(data.aqistd);
+        SetHighPollutionArea(data.pAreaHigh);
+        SetMidPollutionArea(data.pAreaMid);
+        SetLowPollutionArea(data.pAreaLow);
+    }
+
+    protected override void HandleGameStateChanged(GameState currentState) {
+        fogPlane.SetActive(currentState == GameState.MENU);
+    }
+
+    // ############################################################
 
     public void SetFogPollutionLevel(int level) {
         pollutionLevel = level;
@@ -69,14 +84,6 @@ public class PollutionManager : GAMAListener
 
     public float GetAQIMean() {
         return aqiMean;
-    }
-
-    public void SetAQIMax(float max) {
-        aqiMax = max;
-    }
-
-    public float GetAQIMax() {
-        return aqiMax;
     }
 
     public void SetAQIStd(float std) {
@@ -109,15 +116,5 @@ public class PollutionManager : GAMAListener
 
     public float GetLowPollutionArea() {
         return lowPollutionArea;
-    }
-
-    protected override void HandleGamaData(WorldJSONInfo data) {
-        SetFogPollutionLevel(data.pollution);
-        SetAQIMean(data.aqimean);
-        SetAQIMax(data.aqimax);
-        SetAQIStd(data.aqistd);
-        SetHighPollutionArea(data.pAreaHigh);
-        SetMidPollutionArea(data.pAreaMid);
-        SetLowPollutionArea(data.pAreaLow);
     }
 }

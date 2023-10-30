@@ -71,14 +71,20 @@ public class GlobalTest : TCPConnector
     private System.Object lockObject = new System.Object();
 
     private static bool tryGAMAConnection;
-    private static Coroutine connectCoroutine;
+    private Coroutine connectCoroutine;
     private int periodAlive;
 
     public static event Action<WorldJSONInfo> OnGamaDataReceived;
+    
+    void OnEnable() {
+        GameManager.OnGameRestarted += HandleGameRestart;
+    }
 
-    // Start is called before the first frame update
-    void Start() {   
-        // gamaConnected = false;
+    void OnDisable() {
+        GameManager.OnGameRestarted -= HandleGameRestart;
+    }
+
+    void Start() {
         tryGAMAConnection = false;
         periodAlive = 0;
         agentMapList = new List<Dictionary<int, GameObject>>();
@@ -104,11 +110,14 @@ public class GlobalTest : TCPConnector
         checkGamaConnection();     
         if (parameters != null && geoms != null) {
             foreach (GAMAGeometry g in geoms) {
-                if (polyGen == null) polyGen = new PolygonGenerator(converter, offsetYBackgroundGeom);
+                if (polyGen == null) {
+                    polyGen = PolygonGenerator.GetInstance();
+                    polyGen.Init(converter, offsetYBackgroundGeom);
+                }
                 polyGen.GeneratePolygons(g);
             }
 
-            buildingsMap = PolygonGenerator.GetGeneratedBuildings();
+            buildingsMap = polyGen.GetGeneratedBuildings();
             geoms = null;
         } 
         
@@ -154,10 +163,10 @@ public class GlobalTest : TCPConnector
         } 
         
         if (infoWorld != null && receiveInformation) {
-            UpdateAgentList();
             OnGamaDataReceived?.Invoke(infoWorld);
-            BuildingManager.UpdateBuildingsPollution(infoWorld, buildingsMap);
+            UpdateAgentList();
             infoWorld = null;
+            // BuildingManager.Instance.UpdateBuildingsPollution(infoWorld, buildingsMap);
         }
     }
 
@@ -175,7 +184,7 @@ public class GlobalTest : TCPConnector
 
         List<int> p = converter.toGAMACRS(Camera.main.transform.position);
         string closedRoads = BuildClosedRoadsArray();
-        SendMessageToServer("{\"position\":[" + p[0] + "," + p[1] + "],\"rotation\": " + (int)angle + ", \"closedRoads\": " + closedRoads + "}");
+        if (GameManager.Instance.IsState(GameState.GAME)) SendMessageToServer("{\"position\":[" + p[0] + "," + p[1] + "],\"rotation\": " + (int)angle + ", \"closedRoads\": " + closedRoads + "}");
     }
 
     private string BuildClosedRoadsArray() {
@@ -230,7 +239,6 @@ public class GlobalTest : TCPConnector
             obj.transform.SetPositionAndRotation(pos, Quaternion.AngleAxis(rot, Vector3.up));
 
             obj.SetActive(true);
-
 
         } foreach (Dictionary<int, GameObject> agentMap in agentMapList) {
             List<int> ids = new List<int>(agentMap.Keys);
@@ -289,17 +297,22 @@ public class GlobalTest : TCPConnector
                 SetClientReceiveThread(null);
             }
 
-            if (GameManager.Instance.IsState(GameState.GAME)) {
+            if (GameManager.Instance.IsState(GameState.GAME) || GameManager.Instance.IsState(GameState.PENDING)) {
                 GameManager.Instance.DisplayInfoText("Connection lost. Restart game", Color.red);
                 GameManager.Instance.UpdateState(GameState.CRASH);
             }
         } else if(gamaThread != null && gamaThread.IsAlive && GameManager.Instance.IsState(GameState.MENU)) {
             periodAlive++;
             if (periodAlive==5) {
-                GameManager.Instance.UpdateState(GameState.GAME);
+                GameManager.Instance.UpdateState(GameState.PENDING);
                 tryGAMAConnection = false;
             }
             
         }
+    }
+
+    private void HandleGameRestart() {
+        polyGen = null;
+        PolygonGenerator.DestroyInstance();
     }
  }

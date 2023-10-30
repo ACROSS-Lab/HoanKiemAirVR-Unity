@@ -1,30 +1,31 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.XR.Interaction.Toolkit;
 
-public class RoadManager : GAMAListener
+public class RoadManager : GameListener
 {
 
     [SerializeField] private InputActionReference selectAction;
-    [SerializeField] private GameObject rightController;
+    [SerializeField] private Transform controllerTransform;
     [SerializeField] private Material roadMaterial;
-    [SerializeField] private XRInteractionManager interactionManager;
-    [SerializeField] private TMPro.TextMeshProUGUI selectedRoadText;
-    [SerializeField] private GameObject fogPlane;
+    [SerializeField] private XRInteractionManager interactionManager; // Needed for XRInteractable
 
-    private int ctr;
     private bool roadsInitialized;
     private RaycastHit hit;
     private XRSimpleInteractable xrInteractable;
     private Dictionary<string, List<GameObject>> roadsDict;
-    private static string selectedRoad;
-    private static bool roadStatusToSend;
     private static List<string> closedRoads;
-    private static float roadClosedDist;
+    private float roadClosedDist;
+    
+    public static event Action<string, bool> OnRoadInteracted;
+    public static event Action<float> OnClosedRoadDistanceUpdated;
 
     public static RoadManager Instance = null;
+
+    // ############################################################
 
     void Awake() {
         Instance = this;
@@ -33,23 +34,19 @@ public class RoadManager : GAMAListener
     void Start()
     {
         roadsInitialized = false;
-        selectedRoad = "noRoad";
-        roadStatusToSend = false;
         roadsDict = new Dictionary<string, List<GameObject>>();
-        selectedRoadText.text = "";
         closedRoads = new List<string>();
         roadClosedDist = 0.0f;
+        Debug.Log("Roads started");
     }
 
     void Update()
     {   
-        // roads = GameObject.FindGameObjectsWithTag("Road");
-
-        if (!roadsInitialized) InitRoads();
+        if (!roadsInitialized && GameManager.Instance.IsState(GameState.PENDING)) InitRoads();
         HandleRoadsInteraction();     
     }
 
-
+    // ############################################################
 
     private void InitRoads() {
         GameObject[] roads = GameObject.FindGameObjectsWithTag("Road");
@@ -66,7 +63,6 @@ public class RoadManager : GAMAListener
                 roadsDict[road.name].Add(road);
 
                 GameObject child = road.transform.GetChild(0).gameObject;
-
 
                 if (child.name == "bottom_" + road.name) {
                     child.AddComponent<HKRoad>();
@@ -105,17 +101,15 @@ public class RoadManager : GAMAListener
         }     
     }
 
+    // ############################## EVENT HANDLERS ##############################
     private void HandleHoverEnter(string roadName) {
         List<GameObject> roads = roadsDict[roadName];
         foreach (GameObject road in roads) {
             GameObject child = road.transform.GetChild(0).gameObject;
             child.GetComponent<MeshRenderer>().material.SetInt("_Selected", 1);
 
-            if (child.GetComponent<HKRoad>().closed) {
-                SetOverlayContent(roadName + " (closed)", new Color(255, 0, 0, 255));
-            } else {
-                SetOverlayContent(roadName, new Color(0, 255, 0, 255));
-            }
+            OnRoadInteracted?.Invoke(roadName, child.GetComponent<HKRoad>().closed);
+
         }
     }
 
@@ -123,13 +117,13 @@ public class RoadManager : GAMAListener
         List<GameObject> roads = roadsDict[roadName];
         foreach (GameObject road in roads) {
             GameObject child = road.transform.GetChild(0).gameObject;
-            SetOverlayContent("", new Color(0, 0, 0, 0));
+            OnRoadInteracted?.Invoke("", false);
             child.GetComponent<MeshRenderer>().material.SetInt("_Selected", 0);
         }
     }
 
     private void HandleRoadsInteraction() {
-        Ray ray = new Ray(rightController.transform.position, rightController.transform.forward);
+        Ray ray = new Ray(controllerTransform.transform.position, controllerTransform.transform.forward);
         if (selectAction.action.triggered) {
             if (Physics.Raycast(ray, out hit, 1000.0f)) {
                 GameObject hitRoad = hit.collider.gameObject; // assume that collided object is a road (layer on right hand set to Road)
@@ -141,49 +135,47 @@ public class RoadManager : GAMAListener
                         HKRoad hkRoad = child.GetComponent<HKRoad>();
                         hkRoad.toggleClosed();
 
+                        OnRoadInteracted?.Invoke(hitRoadName, hkRoad.closed);
+
                         if (hkRoad.closed) {
                             if (!closedRoads.Contains(hitRoadName)) closedRoads.Add(hitRoadName);
                             child.GetComponent<MeshRenderer>().material.SetInt("_Closed", 1);
-                            SetOverlayContent(hitRoadName + " (closed)", new Color(255, 0, 0, 255));
                         } else {
                             closedRoads.Remove(hitRoadName);
                             child.GetComponent<MeshRenderer>().material.SetInt("_Closed", 0);
-                            SetOverlayContent(hitRoadName, new Color(0, 255, 0, 255));
                         }
                 }
-                // Debug.Log(hitRoadName + " " + ctr.ToString());
-                selectedRoad = hitRoadName;
-                // roadStatusToSend = true;
+                
             }
-        } else {
-            if (!roadStatusToSend) selectedRoad = "noRoad";
         }
-        
     }
 
-
-    public static string GetSelectedRoad() {
-        return selectedRoad;
+    protected override void HandleGamaData(WorldJSONInfo infoWorld) {
+        if (infoWorld.roadClosedDist != roadClosedDist) {
+            SetRoadClosedDist(infoWorld.roadClosedDist);
+            OnClosedRoadDistanceUpdated?.Invoke(roadClosedDist);
+        }
     }
+
+    protected override void HandleGameStateChanged(GameState state) { }
+
+    // ############################################################
 
     public static List<string> GetClosedRoads() {
         return closedRoads;
     }
 
-    public static void SetRoadClosedDist(float roadClosedDist) {
-        RoadManager.roadClosedDist = roadClosedDist;
-    }
-
-    public static float GetRoadClosedDist() {
+    public float GetRoadClosedDist() {
         return roadClosedDist;
     }
 
-    private void SetOverlayContent(string content, Color color) {
-        selectedRoadText.text = content;
-        selectedRoadText.color = color;
+    public bool AreRoadsInitialized() {
+        return roadsInitialized;
     }
 
-    protected override void HandleGamaData(WorldJSONInfo infoWorld) {
-        SetRoadClosedDist(infoWorld.roadClosedDist);
+
+
+    public void SetRoadClosedDist(float dist) {
+        roadClosedDist = dist;
     }
 }

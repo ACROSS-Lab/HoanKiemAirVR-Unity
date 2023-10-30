@@ -15,6 +15,8 @@ public class Timer : MonoBehaviour
     private float midTime;
     private float timeRemaining;
 
+    // ############################################################
+
     void Start()
     {
         timerRunning = false;
@@ -38,6 +40,8 @@ public class Timer : MonoBehaviour
         }
     }
 
+    // ############################################################
+
     private void DisplayTime(float time) {
         time += 1;
         float minutes = Mathf.FloorToInt(time / 60); 
@@ -49,6 +53,13 @@ public class Timer : MonoBehaviour
             timerText.color = Color.Lerp(endColor, midColor, (time) / midTime);
         }
     }
+
+    public void Reset() {
+        timerRunning = false;
+        timeRemaining = timerDuration;
+    }
+
+    // ############################################################
 
     public void SetTimerDuration(float duration) {
         timerDuration = duration;
@@ -66,8 +77,5 @@ public class Timer : MonoBehaviour
         return timerRunning;
     }
 
-    public void Reset() {
-        timerRunning = false;
-        timeRemaining = timerDuration;
-    }
+    
 }
