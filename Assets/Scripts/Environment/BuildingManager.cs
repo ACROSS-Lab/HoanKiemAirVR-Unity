@@ -21,15 +21,16 @@ public class BuildingManager : MonoBehaviour
     }
 
     void OnEnable() {
-        GameManager.OnGeometriesReceived += HandleReceivedGeometries;
+        GameManager.OnGeometriesInitialized += HandleGeometriesInitialized;
     }
 
     void OnDisable() {
-        GameManager.OnGeometriesReceived -= HandleReceivedGeometries;
+        GameManager.OnGeometriesInitialized -= HandleGeometriesInitialized;
     }
 
     void Start()
     {
+        Debug.Log("BuildingManager started");
         buildingsHandled = false;
     }
 
@@ -125,7 +126,7 @@ public class BuildingManager : MonoBehaviour
 
     // ############################################################
 
-    private void HandleReceivedGeometries(GAMAGeometry geoms) {
+    private void HandleGeometriesInitialized(GAMAGeometry geoms) {
         InitBuildings();
     }
 

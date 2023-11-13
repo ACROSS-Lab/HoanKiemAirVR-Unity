@@ -160,7 +160,7 @@ public class ConnectionManager : WebSocketConnector
             if (success) {
                 Debug.Log("ConnectionManager: Executable expression sent to middelware");
             } else {
-                Debug.LogWarning("ConnectionManager: Failed to send executable expression");
+                Debug.LogError("ConnectionManager: Failed to send executable expression");
             }
         }));
     }

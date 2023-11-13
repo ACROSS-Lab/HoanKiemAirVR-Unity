@@ -27,10 +27,23 @@ public class PollutionManager : MonoBehaviour
     // Fog gets always displayed even though pollution level is 0
     private float fogDisplayOffset;   
 
+    private bool updateFogRequested;
+    private GameState currentState = GameState.MENU;
+
     // ############################################################
 
     void Awake() {
         Instance = this;
+    }
+
+    void OnEnable() {
+        GameManager.OnWorldDataReceived += HandleWorldDataReceived;
+        // GameManager.OnGameStateChanged += HandleGameStateChanged;
+    }
+
+    void OnDisable() {
+        GameManager.OnWorldDataReceived -= HandleWorldDataReceived;
+        // GameManager.OnGameStateChanged -= HandleGameStateChanged;
     }
 
     void Start()
@@ -52,21 +65,29 @@ public class PollutionManager : MonoBehaviour
         float currentAlpha = (((float) pollutionLevel) / maxPollutionLevel) * 1.68f;
         fogMaterial.SetFloat("_Color_Alpha", blendingCoef * previousAlpha + (1 - blendingCoef) * currentAlpha + fogDisplayOffset);
     }
+
+    void LateUpdate() {
+        if (updateFogRequested) {
+            fogPlane.SetActive(currentState == GameState.MENU);
+            updateFogRequested = false;
+        }
+    }
     
-    // ############################################################
+    // ######################## EVENT HANDLERS ####################################
 
-    // protected override void HandleGamaData(WorldJSONInfo data) {
-    //     SetFogPollutionLevel(data.pollution);
-    //     SetAQIMean(data.aqimean);
-    //     SetAQIStd(data.aqistd);
-    //     SetHighPollutionArea(data.pAreaHigh);
-    //     SetMidPollutionArea(data.pAreaMid);
-    //     SetLowPollutionArea(data.pAreaLow);
-    // }
+    private void HandleGameStateChanged(GameState currentState) {
+        this.currentState = currentState;
+        updateFogRequested = true;
+    }
 
-    // protected override void HandleGameStateChanged(GameState currentState) {
-    //     fogPlane.SetActive(currentState == GameState.MENU);
-    // }
+    private void HandleWorldDataReceived(WorldJSONInfo data) {
+        SetFogPollutionLevel(data.pollution);
+        SetAQIMean(data.aqimean);
+        SetAQIStd(data.aqistd);
+        SetHighPollutionArea(data.pAreaHigh);
+        SetMidPollutionArea(data.pAreaMid);
+        SetLowPollutionArea(data.pAreaLow);
+    }
 
     // ############################################################
 

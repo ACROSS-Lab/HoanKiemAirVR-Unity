@@ -13,67 +13,67 @@ using UnityEngine.SceneManagement;
 public class GlobalTest : MonoBehaviour
 {
 
-    [SerializeField] private GameObject Player;
+    // [SerializeField] private GameObject Player;
 
-    [SerializeField] private GameObject Ground;
+    // [SerializeField] private GameObject Ground;
 
-    [SerializeField] private List<GameObject> Agents;
+    // [SerializeField] private List<GameObject> Agents;
 
-    //optional: rotation, Y-translation and Size scale to apply to the prefabs correspoding to the different species of agents
-    [SerializeField] private List<float> rotations = new List<float> { 90.0f, 90.0f, 0.0f };
-    [SerializeField] private List<float> rotationsCoeff = new List<float> { 1, 1, 0.0f };
-    [SerializeField] private List<float> YValues = new List<float> { -0.9f, -0.9f, 0.15f };
-    [SerializeField] private List<float> Sizefactor = new List<float> { 0.3f, 0.3f, 1.0f }; 
+    // //optional: rotation, Y-translation and Size scale to apply to the prefabs correspoding to the different species of agents
+    // [SerializeField] private List<float> rotations = new List<float> { 90.0f, 90.0f, 0.0f };
+    // [SerializeField] private List<float> rotationsCoeff = new List<float> { 1, 1, 0.0f };
+    // [SerializeField] private List<float> YValues = new List<float> { -0.9f, -0.9f, 0.15f };
+    // [SerializeField] private List<float> Sizefactor = new List<float> { 0.3f, 0.3f, 1.0f }; 
 
-    // optional: define a scale between GAMA and Unity for the location given
-    [SerializeField] private float GamaCRSCoefX = 1.0f;
-    [SerializeField] private float GamaCRSCoefY = 1.0f;
-    [SerializeField] private float GamaCRSOffsetX = 0.0f;
-    [SerializeField] private float GamaCRSOffsetY = 0.0f;
+    // // optional: define a scale between GAMA and Unity for the location given
+    // [SerializeField] private float GamaCRSCoefX = 1.0f;
+    // [SerializeField] private float GamaCRSCoefY = 1.0f;
+    // [SerializeField] private float GamaCRSOffsetX = 0.0f;
+    // [SerializeField] private float GamaCRSOffsetY = 0.0f;
 
-    // Z offset and scale
-    [SerializeField] private float GamaCRSOffsetZ = 180.0f;
-    [SerializeField] private float GamaCRSCoefZ = 1.0f;
+    // // Z offset and scale
+    // [SerializeField] private float GamaCRSOffsetZ = 180.0f;
+    // [SerializeField] private float GamaCRSCoefZ = 1.0f;
 
-    //Y scale for the ground
-    [SerializeField] private float groundY = 1.0f;
+    // //Y scale for the ground
+    // [SerializeField] private float groundY = 1.0f;
 
-    //Y-offset to apply to the background geometries
-    [SerializeField] private float offsetYBackgroundGeom = 0.1f;
+    // //Y-offset to apply to the background geometries
+    // [SerializeField] private float offsetYBackgroundGeom = 0.1f;
 
 
 
-    private List<Dictionary<int, GameObject>> agentMapList;
+    // private List<Dictionary<int, GameObject>> agentMapList;
 
-    private TcpClient socketConnection;
-    private Thread clientReceiveThread;
+    // private TcpClient socketConnection;
+    // private Thread clientReceiveThread;
 
-    private bool initialized = false;
-    private bool playerPositionUpdate = false;
+    // private bool initialized = false;
+    // private bool playerPositionUpdate = false;
 
-    private bool defineGroundSize = false;
+    // private bool defineGroundSize = false;
 
-    private static bool receiveInformation = true;
+    // private static bool receiveInformation = true;
 
-    private WorldJSONInfo infoWorld = null;
+    // private WorldJSONInfo infoWorld = null;
 
-    private ConnectionParameter parameters = null;
+    // private ConnectionParameter parameters = null;
 
-    private List<GAMAGeometry> geoms;
+    // private List<GAMAGeometry> geoms;
 
-    private static System.Timers.Timer aTimer;
+    // private static System.Timers.Timer aTimer;
 
-    private CoordinateConverter converter;
+    // private CoordinateConverter converter;
 
-    private Dictionary<int, GameObject> buildingsMap;
+    // private Dictionary<int, GameObject> buildingsMap;
 
-    private PolygonGenerator polyGen;
+    // private PolygonGenerator polyGen;
 
-    private static bool tryGAMAConnection;
-    private Coroutine connectCoroutine;
-    private int periodAlive;
+    // private static bool tryGAMAConnection;
+    // private Coroutine connectCoroutine;
+    // private int periodAlive;
 
-    public static event Action<WorldJSONInfo> OnGamaDataReceived;
+    // public static event Action<WorldJSONInfo> OnGamaDataReceived;
     
     // void OnEnable() {
     //     GameManager.OnGameRestarted += HandleGameRestart;
@@ -107,6 +107,8 @@ public class GlobalTest : MonoBehaviour
 
     // void FixedUpdate() {  
     //     // checkGamaConnection();     
+
+    //     // GENERATE BUILDINGS IF NOT DONE
     //     if (parameters != null && geoms != null) {
     //         foreach (GAMAGeometry g in geoms) {
     //             if (polyGen == null) {
@@ -120,6 +122,7 @@ public class GlobalTest : MonoBehaviour
     //         geoms = null;
     //     } 
         
+    //     // DEFINE GROUND SIZE AND PLAYER INITIAL PARAMETERS
     //     if (parameters != null && Ground != null && !defineGroundSize) {
     //         Vector3 ls = converter.fromGAMACRS(parameters.world[0], parameters.world[1]);
     //         if (ls.z < 0)
@@ -138,7 +141,6 @@ public class GlobalTest : MonoBehaviour
     //         if (Player != null) {
     //             Vector3 pos = converter.fromGAMACRS(parameters.position[0], parameters.position[1]);
     //             Player.transform.position = pos;
-
     //         } 
             
     //         if (parameters.physics && Player != null) {
@@ -152,15 +154,18 @@ public class GlobalTest : MonoBehaviour
     //         }
     //     }
 
+    //     // HANDLE PLAYER TELEPORTTION FROM GAMA TO UNITY
     //     if (Player != null && playerPositionUpdate && parameters != null) {
     //         Player.transform.position = converter.fromGAMACRS(parameters.position[0], parameters.position[1]);
     //         playerPositionUpdate = false;
     //     }
 
+    //     // SEND PLAYER POSITION TO GAMA
     //     if (initialized && Player != null && receiveInformation) {
     //         SendPlayerPosition();
     //     } 
         
+    //     // HANDLE SIMUATION INFORMATIONS RECEIVED FROM GAMA
     //     if (infoWorld != null && receiveInformation) {
     //         OnGamaDataReceived?.Invoke(infoWorld);
     //         UpdateAgentList();
@@ -309,8 +314,8 @@ public class GlobalTest : MonoBehaviour
     //     }
     // }
 
-    private void HandleGameRestart() {
-        polyGen = null;
-        PolygonGenerator.DestroyInstance();
-    }
+    // private void HandleGameRestart() {
+    //     polyGen = null;
+    //     PolygonGenerator.DestroyInstance();
+    // }
  }

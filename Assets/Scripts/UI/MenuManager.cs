@@ -22,11 +22,11 @@ public class MenuManager : MonoBehaviour
     }
     
     void OnEnable() {
-        GameManager.OnGameStateChanged += HandleStateChange;
+        GameManager.OnGameStateChanged += HandleGameStateChange;
     }
 
     void OnDisable() {
-        GameManager.OnGameStateChanged -= HandleStateChange;
+        GameManager.OnGameStateChanged -= HandleGameStateChange;
     }
 
     void LateUpdate() {
@@ -42,7 +42,8 @@ public class MenuManager : MonoBehaviour
         }
     }
 
-    private void HandleStateChange(GameState newState) {
+    private void HandleGameStateChange(GameState newState) {
+        Debug.Log("MenuManager: HandleGameStateChange -> " + newState);
         updateRequested = true;
         curentState = newState; 
     }   

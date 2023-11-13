@@ -1,7 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using UnityEngine; 
+using UnityEngine;
 using UnityEngine.SceneManagement;
 using Unity.Collections;
 using System.Linq;
@@ -10,6 +10,7 @@ using Newtonsoft.Json.Linq;
 public class GameManager : MonoBehaviour
 {
     [SerializeField] private GameObject player;
+    [SerializeField] private GameObject Ground;
     [SerializeField] private List<GameObject> Agents;
     [SerializeField] private TMPro.TextMeshProUGUI infoText;
     [SerializeField] private GameState currentState;
@@ -44,15 +45,15 @@ public class GameManager : MonoBehaviour
 
     public static event Action<GameState> OnGameStateChanged;
     public static event Action OnGameRestarted;
-    public static event Action<GAMAGeometry> OnGeometriesReceived;
-    public static event Action<ConnectionParameter> OnSimulationInfosReceived;
-    public static event Action OnAgentsReceived;
+    public static event Action<GAMAGeometry> OnGeometriesInitialized;
+    public static event Action<ConnectionParameter> OnSimulationParametersReceived;
+    public static event Action<WorldJSONInfo> OnWorldDataReceived;
 
     private Timer timer;
     private List<Dictionary<int, GameObject>> agentMapList;
 
     private bool geometriesInitialized;
-    private bool simulationInfosReceived;
+    private bool simulationParametersReceived;
 
     private CoordinateConverter converter;
     private PolygonGenerator polyGen;
@@ -84,12 +85,13 @@ public class GameManager : MonoBehaviour
         InitAgentsList();
         timer = GetComponent<Timer>();
         geometriesInitialized = false;
-        simulationInfosReceived = false;
+        simulationParametersReceived = false;
     }
 
     void FixedUpdate() {
         if(IsGameState(GameState.GAME)) {
             UpdatePlayerPosition();
+            UpdateAgentsList();
         }
     }
 
@@ -133,6 +135,7 @@ public class GameManager : MonoBehaviour
                 break;
         }
 
+        
         currentState = newState;
         OnGameStateChanged?.Invoke(currentState);
     }
@@ -148,10 +151,10 @@ public class GameManager : MonoBehaviour
         DisplayInfoText("", new Color(0,0,0,0));
     }    
 
-    // public void RestartGame() {
-    //     OnGameRestarted?.Invoke();        
-    //     SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
-    // }
+    public void RestartGame() {
+        OnGameRestarted?.Invoke();        
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    }
 
     // ############################################## CONNECTION HANDLERS ########################################
 
@@ -164,33 +167,37 @@ public class GameManager : MonoBehaviour
 
     private void HandleServerMessageReceived(JObject jsonObj) {
         string firstKey = jsonObj.Properties().Select(p => p.Name).FirstOrDefault();
-
+        Debug.Log(jsonObj.ToString());
         switch (firstKey) {
 
             // handle general informations about the simulation
             case "precision":
+                
                 parameters = ConnectionParameter.CreateFromJSON(jsonObj.ToString());
                 converter = new CoordinateConverter(parameters.precision, GamaCRSCoefX, GamaCRSCoefY, GamaCRSCoefY, GamaCRSOffsetX, GamaCRSOffsetY, GamaCRSOffsetZ);
-                simulationInfosReceived = true;
+                simulationParametersReceived = true;
+                InitGroundParameters();
                 InitPlayerParameters();
-                OnSimulationInfosReceived?.Invoke(parameters);
                 Debug.Log("GameManager: Received simulation parameters");
+                OnSimulationParametersReceived?.Invoke(parameters);
+                
             break;
 
             // handle geometries sent by GAMA at the beginning of the simulation
             case "points":
-                if (!simulationInfosReceived) {
+                if (!simulationParametersReceived) {
                     Debug.LogError("GameManager: Received geometries before simulation parameters");
+                    // TODO: handle error so that the simulation doesnt crash
                     return;
                 } else {
                     GAMAGeometry g = GAMAGeometry.CreateFromJSON(jsonObj.ToString());
                     if (polyGen == null) {
                         polyGen = PolygonGenerator.GetInstance();
-                        polyGen.Init(converter, GameManager.Instance.GetOffsetYBackgroundGeom());
+                        polyGen.Init(converter, offsetYBackgroundGeom);
                     }
                     polyGen.GeneratePolygons(g);
-                    OnGeometriesReceived?.Invoke(g);
                     geometriesInitialized = true;
+                    OnGeometriesInitialized?.Invoke(g);
                     Debug.Log("GameManager: Received geometries");
                 }
             break;
@@ -198,8 +205,12 @@ public class GameManager : MonoBehaviour
             // handle agents while simulation is running
             case "agents":
                 infoWorld = WorldJSONInfo.CreateFromJSON(jsonObj.ToString());
-                OnAgentsReceived?.Invoke();
+                OnWorldDataReceived?.Invoke(infoWorld);
             break;
+
+            default:
+                Debug.LogError("GameManager: Received unknown message from middleware");
+                break;
         }
 
     }
@@ -244,12 +255,11 @@ public class GameManager : MonoBehaviour
         return simulationInfosExpected;
     }
 
-    public float GetOffsetYBackgroundGeom() {
-        return offsetYBackgroundGeom;
-    }
-
     // ############################################################
     private void InitPlayerParameters() {
+        Vector3 pos = converter.fromGAMACRS(parameters.position[0], parameters.position[1]);
+        player.transform.position = pos;
+
         if (parameters.physics) {
             if (!player.TryGetComponent(out Rigidbody rigidBody)) {
                 player.AddComponent<Rigidbody>();
@@ -259,6 +269,21 @@ public class GameManager : MonoBehaviour
                 Destroy(rigidBody);
             }
         }
+    }
+
+    private void InitGroundParameters() {
+        Vector3 ls = converter.fromGAMACRS(parameters.world[0], parameters.world[1]);
+        if (ls.z < 0)
+            ls.z = -ls.z;
+        if (ls.x < 0)
+            ls.x = -ls.x;
+        ls.y = groundY;
+        Ground.transform.localScale = ls;
+
+        Vector3 ps = converter.fromGAMACRS(parameters.world[0] / 2, parameters.world[1] / 2);
+        ps.y = -groundY;
+
+        Ground.transform.position = ps;
     }
 
     private void UpdatePlayerPosition() {
@@ -333,8 +358,8 @@ public class GameManager : MonoBehaviour
     }
 }
 
-// ############################################################
 
+// ############################################################
 public enum GameState {
     // not connected to middleware
     MENU,
@@ -347,4 +372,3 @@ public enum GameState {
     END,
     CRASH
 }
-

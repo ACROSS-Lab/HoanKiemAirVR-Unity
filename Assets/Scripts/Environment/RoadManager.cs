@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.XR.Interaction.Toolkit;
+using Newtonsoft.Json;
 
 public class RoadManager : MonoBehaviour
 {
@@ -31,19 +32,31 @@ public class RoadManager : MonoBehaviour
         Instance = this;
     }
 
+    void OnEnable() {
+        GameManager.OnGeometriesInitialized += HandleGeometriesInitialized;
+        GameManager.OnWorldDataReceived += HandleWorldDataReceived;
+    }
+
+    void OnDisable() {
+        GameManager.OnGeometriesInitialized -= HandleGeometriesInitialized;
+        GameManager.OnWorldDataReceived -= HandleWorldDataReceived;
+    }
+
     void Start()
     {
         roadsInitialized = false;
         roadsDict = new Dictionary<string, List<GameObject>>();
         closedRoads = new List<string>();
         roadClosedDist = 0.0f;
-        Debug.Log("Roads started");
+        Debug.Log("RoadManager started");
     }
 
     void Update()
     {   
-        if (!roadsInitialized && GameManager.Instance.IsGameState(GameState.WAITING)) InitRoads();
-        HandleRoadsInteraction();     
+        // if (!roadsInitialized && GameManager.Instance.IsGameState(GameState.WAITING)) InitRoads();
+        if(GameManager.Instance.IsGameState(GameState.GAME)) {
+            HandleRoadsInteraction();
+        }   
     }
 
     // ############################################################
@@ -145,22 +158,29 @@ public class RoadManager : MonoBehaviour
                             child.GetComponent<MeshRenderer>().material.SetInt("_Closed", 0);
                         }
                 }
-                
+                SendClosedRoads();
             }
         }
     }
 
-    // protected override void HandleGamaData(WorldJSONInfo infoWorld) {
-    //     if (infoWorld.roadClosedDist != roadClosedDist) {
-    //         SetRoadClosedDist(infoWorld.roadClosedDist);
-    //         OnClosedRoadDistanceUpdated?.Invoke(roadClosedDist);
-    //     }
-    // }
+    private void SendClosedRoads() {
+        string closedRoadsJSON = JsonConvert.SerializeObject(closedRoads);
+        ConnectionManager.Instance.SendExecutableExpression("do update_road_closed(" + closedRoadsJSON + ")");
+    }
 
-    // protected override void HandleGameStateChanged(GameState state) { }
+    private void HandleGeometriesInitialized(GAMAGeometry data) {
+        InitRoads();
+    }
+
+    private void HandleWorldDataReceived(WorldJSONInfo infoWorld) {
+        if (infoWorld.roadClosedDist != roadClosedDist) {
+            SetRoadClosedDist(infoWorld.roadClosedDist);
+            OnClosedRoadDistanceUpdated?.Invoke(roadClosedDist);
+        }
+    }
+
 
     // ############################################################
-
     public static List<string> GetClosedRoads() {
         return closedRoads;
     }
@@ -172,8 +192,6 @@ public class RoadManager : MonoBehaviour
     public bool AreRoadsInitialized() {
         return roadsInitialized;
     }
-
-
 
     public void SetRoadClosedDist(float dist) {
         roadClosedDist = dist;
