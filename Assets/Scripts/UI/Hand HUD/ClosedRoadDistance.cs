@@ -20,7 +20,7 @@ public class ClosedRoadDistance : MonoBehaviour
     {
         closedRoadText.text = "0.00 km";
 
-        if (GameManager.Instance.IsState(GameState.END)) {
+        if (GameManager.Instance.IsGameState(GameState.END)) {
             closedRoadText.text = (RoadManager.Instance.GetRoadClosedDist() / 1000.0f).ToString("0.00") + " km";
         }
     }

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.Threading;
 
-public class BuildingManager : GameListener
+public class BuildingManager : MonoBehaviour
 {
 
     [SerializeField] private Material buildingMaterial;
@@ -20,31 +20,39 @@ public class BuildingManager : GameListener
         Instance = this;
     }
 
+    void OnEnable() {
+        GameManager.OnGeometriesReceived += HandleReceivedGeometries;
+    }
+
+    void OnDisable() {
+        GameManager.OnGeometriesReceived -= HandleReceivedGeometries;
+    }
+
     void Start()
     {
         buildingsHandled = false;
     }
 
-    void Update()
-    {
-        if (!buildingsHandled && GameManager.Instance.IsState(GameState.PENDING)) InitBuildings();
-    }
+    // void Update()
+    // {
+    //     if (!buildingsHandled && GameManager.Instance.IsGameState(GameState.WAITING)) InitBuildings();
+    // }
 
     // ############################################################
 
-    protected override void HandleGamaData(WorldJSONInfo infoWorld) {
-        UpdateBuildingsPollution(infoWorld, buildingsMap);
-    }
+    // protected override void HandleGamaData(WorldJSONInfo infoWorld) {
+    //     UpdateBuildingsPollution(infoWorld, buildingsMap);
+    // }
 
-    protected override void HandleGameStateChanged(GameState state) { }
+    // protected override void HandleGameStateChanged(GameState state) { }
 
 
 
     // ############################################################
 
     private void InitBuildings() {
-        if (PolygonGenerator.GetInstance().GetGeneratedBuildings() != null) {
-            buildingsMap = PolygonGenerator.GetInstance().GetGeneratedBuildings();
+        if (PolygonGenerator.GetInstance().GetGeneratedGeometries3D() != null) {
+            buildingsMap = PolygonGenerator.GetInstance().GetGeneratedGeometries3D();
             HandleBuildings();
         }
     }
@@ -113,6 +121,12 @@ public class BuildingManager : GameListener
         float a = (yb-ya)/(xb - xa);
         float b = ya - a * xa;
         return pos.z < a * pos.x + b;
+    }
+
+    // ############################################################
+
+    private void HandleReceivedGeometries(GAMAGeometry geoms) {
+        InitBuildings();
     }
 
     // ############################################################

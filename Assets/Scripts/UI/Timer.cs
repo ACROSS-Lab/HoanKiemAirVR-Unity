@@ -33,7 +33,7 @@ public class Timer : MonoBehaviour
             } else {
                 timerRunning = false;
                 timeRemaining = 0;
-                GameManager.Instance.UpdateState(GameState.END);
+                GameManager.Instance.UpdateGameState(GameState.END);
             }
         } else {
             timeRemaining = timerDuration;

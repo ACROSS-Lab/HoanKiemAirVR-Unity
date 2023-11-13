@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.XR.Interaction.Toolkit;
 
-public class RoadManager : GameListener
+public class RoadManager : MonoBehaviour
 {
 
     [SerializeField] private InputActionReference selectAction;
@@ -42,7 +42,7 @@ public class RoadManager : GameListener
 
     void Update()
     {   
-        if (!roadsInitialized && GameManager.Instance.IsState(GameState.PENDING)) InitRoads();
+        if (!roadsInitialized && GameManager.Instance.IsGameState(GameState.WAITING)) InitRoads();
         HandleRoadsInteraction();     
     }
 
@@ -150,14 +150,14 @@ public class RoadManager : GameListener
         }
     }
 
-    protected override void HandleGamaData(WorldJSONInfo infoWorld) {
-        if (infoWorld.roadClosedDist != roadClosedDist) {
-            SetRoadClosedDist(infoWorld.roadClosedDist);
-            OnClosedRoadDistanceUpdated?.Invoke(roadClosedDist);
-        }
-    }
+    // protected override void HandleGamaData(WorldJSONInfo infoWorld) {
+    //     if (infoWorld.roadClosedDist != roadClosedDist) {
+    //         SetRoadClosedDist(infoWorld.roadClosedDist);
+    //         OnClosedRoadDistanceUpdated?.Invoke(roadClosedDist);
+    //     }
+    // }
 
-    protected override void HandleGameStateChanged(GameState state) { }
+    // protected override void HandleGameStateChanged(GameState state) { }
 
     // ############################################################
 

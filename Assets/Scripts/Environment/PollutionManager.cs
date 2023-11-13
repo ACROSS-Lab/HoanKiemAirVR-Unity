@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System;
 using UnityEngine;
 
-public class PollutionManager : GameListener
+public class PollutionManager : MonoBehaviour
 {
     
     [SerializeField] private GameObject fogPlane;
@@ -55,18 +55,18 @@ public class PollutionManager : GameListener
     
     // ############################################################
 
-    protected override void HandleGamaData(WorldJSONInfo data) {
-        SetFogPollutionLevel(data.pollution);
-        SetAQIMean(data.aqimean);
-        SetAQIStd(data.aqistd);
-        SetHighPollutionArea(data.pAreaHigh);
-        SetMidPollutionArea(data.pAreaMid);
-        SetLowPollutionArea(data.pAreaLow);
-    }
+    // protected override void HandleGamaData(WorldJSONInfo data) {
+    //     SetFogPollutionLevel(data.pollution);
+    //     SetAQIMean(data.aqimean);
+    //     SetAQIStd(data.aqistd);
+    //     SetHighPollutionArea(data.pAreaHigh);
+    //     SetMidPollutionArea(data.pAreaMid);
+    //     SetLowPollutionArea(data.pAreaLow);
+    // }
 
-    protected override void HandleGameStateChanged(GameState currentState) {
-        fogPlane.SetActive(currentState == GameState.MENU);
-    }
+    // protected override void HandleGameStateChanged(GameState currentState) {
+    //     fogPlane.SetActive(currentState == GameState.MENU);
+    // }
 
     // ############################################################
 

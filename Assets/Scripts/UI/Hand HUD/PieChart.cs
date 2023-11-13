@@ -16,7 +16,7 @@ public class PieChart : MonoBehaviour
     void Start()
     {
         totalAmount = ComputeTotalAmount();
-        if (GameManager.Instance.IsState(GameState.END)) {
+        if (GameManager.Instance.IsGameState(GameState.END)) {
             totalAmount = ComputeTotalAmount();
             float[] vals = {PollutionManager.Instance.GetLowPollutionArea(), PollutionManager.Instance.GetMidPollutionArea(), PollutionManager.Instance.GetHighPollutionArea()};
             ConvertValuesToPie(vals);
@@ -25,8 +25,9 @@ public class PieChart : MonoBehaviour
 
     void Update()
     {
-        if (GameManager.Instance.IsState(GameState.GAME))
+        if (GameManager.Instance.IsGameState(GameState.GAME))
         {
+            Debug.Log("PieChart Update");
             totalAmount = ComputeTotalAmount();
             float[] vals = {PollutionManager.Instance.GetLowPollutionArea(), PollutionManager.Instance.GetMidPollutionArea(), PollutionManager.Instance.GetHighPollutionArea()};
             ConvertValuesToPie(vals);

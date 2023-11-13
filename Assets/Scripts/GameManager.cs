@@ -1,93 +1,143 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
+using UnityEngine; 
 using UnityEngine.SceneManagement;
 using Unity.Collections;
+using System.Linq;
+using Newtonsoft.Json.Linq;
 
 public class GameManager : MonoBehaviour
 {
-
+    [SerializeField] private GameObject player;
+    [SerializeField] private List<GameObject> Agents;
     [SerializeField] private TMPro.TextMeshProUGUI infoText;
     [SerializeField] private GameState currentState;
 
-    public static GameManager Instance = null;
+    [Header("Expected initial parameters")]
+    [SerializeField] private bool geometriesExpected = true;
+    [SerializeField] private bool simulationInfosExpected = true;
+
+    //optional: rotation, Y-translation and Size scale to apply to the prefabs correspoding to the different species of agents
+    [SerializeField] private List<float> rotations = new List<float> { 90.0f, 90.0f, 0.0f };
+    [SerializeField] private List<float> rotationsCoeff = new List<float> { 1, 1, 0.0f };
+    [SerializeField] private List<float> YValues = new List<float> { -0.9f, -0.9f, 0.15f };
+    [SerializeField] private List<float> Sizefactor = new List<float> { 0.3f, 0.3f, 1.0f }; 
+
+    // optional: define a scale between GAMA and Unity for the location given
+    [SerializeField] private float GamaCRSCoefX = 1.0f;
+    [SerializeField] private float GamaCRSCoefY = 1.0f;
+    [SerializeField] private float GamaCRSOffsetX = 0.0f;
+    [SerializeField] private float GamaCRSOffsetY = 0.0f;
+
+    // Z offset and scale
+    [SerializeField] private float GamaCRSOffsetZ = 180.0f;
+    [SerializeField] private float GamaCRSCoefZ = 1.0f;
+
+    //Y scale for the ground
+    [SerializeField] private float groundY = 1.0f;
+
+    //Y-offset to apply to the background geometries
+    [SerializeField] private float offsetYBackgroundGeom = 0.1f;
+
+    [SerializeField] private float minSimulationDuration = 10.0f;
+
     public static event Action<GameState> OnGameStateChanged;
     public static event Action OnGameRestarted;
+    public static event Action<GAMAGeometry> OnGeometriesReceived;
+    public static event Action<ConnectionParameter> OnSimulationInfosReceived;
+    public static event Action OnAgentsReceived;
 
     private Timer timer;
-    private float minSimulationDuration;
+    private List<Dictionary<int, GameObject>> agentMapList;
 
-    // ############################################################
+    private bool geometriesInitialized;
+    private bool simulationInfosReceived;
+
+    private CoordinateConverter converter;
+    private PolygonGenerator polyGen;
+    private ConnectionParameter parameters;
+    private WorldJSONInfo infoWorld;
+
+    public static GameManager Instance = null;
+
+    // #############################################################
 
     void Awake() {
         Instance = this;
     }
 
-    void Start() {
-        timer = GetComponent<Timer>();
-        minSimulationDuration = 10f;
-        UpdateState(GameState.MENU);
-        RemoveInfoText();
+    void OnEnable() {
+        ConnectionManager.OnServerMessageReceived += HandleServerMessageReceived;
+        ConnectionManager.OnConnectionAttempted += HandleConnectionAttempted;
+        ConnectionManager.OnConnectionStateChange += HandleConnectionStateChange;
     }
 
-    void Update() {
-        if (RoadManager.Instance.AreRoadsInitialized() && BuildingManager.Instance.AreBuildingsHandled() && currentState == GameState.PENDING) {
-            UpdateState(GameState.GAME);
+    void OnDisable() {
+        ConnectionManager.OnServerMessageReceived -= HandleServerMessageReceived;
+        ConnectionManager.OnConnectionAttempted -= HandleConnectionAttempted;
+        ConnectionManager.OnConnectionStateChange -= HandleConnectionStateChange;
+    }
+
+    void Start() {
+        UpdateGameState(GameState.MENU);
+        InitAgentsList();
+        timer = GetComponent<Timer>();
+        geometriesInitialized = false;
+        simulationInfosReceived = false;
+    }
+
+    void FixedUpdate() {
+        if(IsGameState(GameState.GAME)) {
+            UpdatePlayerPosition();
         }
     }
 
     // ############################################################
     
-    public void UpdateState(GameState newState) {
-        currentState = newState;
-
-        OnGameStateChanged?.Invoke(newState);
-
-        switch(currentState) {
+    public void UpdateGameState(GameState newState) {    
+        
+        switch(newState) {
             case GameState.MENU:
-                HandleMenuState();
+                RemoveInfoText();
+                Debug.Log("GameManager: UpdateGameState -> MENU");
                 break;
+
+            case GameState.WAITING:
+                Debug.Log("GameManager: UpdateGameState -> WAITING");
+                RemoveInfoText();
+                break;
+
+            case GameState.LOADING_DATA:
+                Debug.Log("GameManager: UpdateGameState -> LOADING_DATA");
+                break;
+
             case GameState.GAME:
-                HandleGameState();
+                Debug.Log("GameManager: UpdateGameState -> GAME");
+                RemoveInfoText();
+                timer.SetTimerRunning(true);
                 break;
+
             case GameState.END:
-                HandleEndState();
+                timer.SetTimerRunning(false);
+                Debug.Log("GameManager: UpdateGameState -> END");
                 break;
+
             case GameState.CRASH:
-                HandleCrashState();
+                timer.Reset();
+                Debug.Log("GameManager: UpdateGameState -> CRASH");
                 break;
-            case GameState.PENDING:
-                HandlePendingState();
+
+            default:
+                Debug.Log("GameManager: UpdateGameState -> UNKNOWN");
                 break;
-            
         }
+
+        currentState = newState;
+        OnGameStateChanged?.Invoke(currentState);
     }
 
     // ############################## HANDLERS ##############################
-    
-
-    private void HandleMenuState() { }
-
-    private void HandleGameState() {
-        RemoveInfoText();
-        timer.SetTimerRunning(true);
-    }
-
-    private void HandleEndState() {
-        timer.SetTimerRunning(false);
-        TCPConnector.GetSocketConnection().Close(); 
-        TCPConnector.GetClientReceiveThread().Abort();
-        TCPConnector.ResetConnection();
-    }
-
-    private void HandleCrashState() {
-        timer.Reset();
-    }
-    
-    private void HandlePendingState() {
-        RemoveInfoText();
-    }
 
     public void DisplayInfoText(string text, Color color) {
         infoText.text = text;
@@ -98,33 +148,203 @@ public class GameManager : MonoBehaviour
         DisplayInfoText("", new Color(0,0,0,0));
     }    
 
-    public void RestartGame() {
-        OnGameRestarted?.Invoke();        
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    // public void RestartGame() {
+    //     OnGameRestarted?.Invoke();        
+    //     SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    // }
+
+    // ############################################## CONNECTION HANDLERS ########################################
+
+    private void HandleConnectionStateChange(ConnectionState state) {
+        // player has been added to the simulation by the middleware
+        if (state == ConnectionState.AUTHENTICATED) {
+            UpdateGameState(GameState.LOADING_DATA);
+        }
     }
+
+    private void HandleServerMessageReceived(JObject jsonObj) {
+        string firstKey = jsonObj.Properties().Select(p => p.Name).FirstOrDefault();
+
+        switch (firstKey) {
+
+            // handle general informations about the simulation
+            case "precision":
+                parameters = ConnectionParameter.CreateFromJSON(jsonObj.ToString());
+                converter = new CoordinateConverter(parameters.precision, GamaCRSCoefX, GamaCRSCoefY, GamaCRSCoefY, GamaCRSOffsetX, GamaCRSOffsetY, GamaCRSOffsetZ);
+                simulationInfosReceived = true;
+                InitPlayerParameters();
+                OnSimulationInfosReceived?.Invoke(parameters);
+                Debug.Log("GameManager: Received simulation parameters");
+            break;
+
+            // handle geometries sent by GAMA at the beginning of the simulation
+            case "points":
+                if (!simulationInfosReceived) {
+                    Debug.LogError("GameManager: Received geometries before simulation parameters");
+                    return;
+                } else {
+                    GAMAGeometry g = GAMAGeometry.CreateFromJSON(jsonObj.ToString());
+                    if (polyGen == null) {
+                        polyGen = PolygonGenerator.GetInstance();
+                        polyGen.Init(converter, GameManager.Instance.GetOffsetYBackgroundGeom());
+                    }
+                    polyGen.GeneratePolygons(g);
+                    OnGeometriesReceived?.Invoke(g);
+                    geometriesInitialized = true;
+                    Debug.Log("GameManager: Received geometries");
+                }
+            break;
+
+            // handle agents while simulation is running
+            case "agents":
+                infoWorld = WorldJSONInfo.CreateFromJSON(jsonObj.ToString());
+                OnAgentsReceived?.Invoke();
+            break;
+        }
+
+    }
+
+    private void HandleConnectionAttempted(bool success) {
+        if (success) {
+            if(IsGameState(GameState.MENU)) {
+                UpdateGameState(GameState.WAITING);
+                Debug.Log("GameManager: Successfully connected to middleware");
+            }
+        } else {
+            // stay in MENU state
+            DisplayInfoText("Unable to connect to middleware", Color.red);
+        }
+    }
+
+    
 
     // ############################################################
 
-    public bool IsState(GameState state) {
+    public bool IsGameState(GameState state) {
         return currentState == state;
     }
     
     public Timer GetTimer() {
-    return timer;
+        return timer;
     }   
 
     public float GetMinSimulationDuration() {
         return minSimulationDuration;
+    }
+
+    public GameState GetCurrentState() {
+        return currentState;
+    }
+
+    public bool GeometriesExpected() {
+        return geometriesExpected;
+    }
+
+    public bool SimulationInfosExpected() {
+        return simulationInfosExpected;
+    }
+
+    public float GetOffsetYBackgroundGeom() {
+        return offsetYBackgroundGeom;
+    }
+
+    // ############################################################
+    private void InitPlayerParameters() {
+        if (parameters.physics) {
+            if (!player.TryGetComponent(out Rigidbody rigidBody)) {
+                player.AddComponent<Rigidbody>();
+            }
+        } else {
+            if (player.TryGetComponent(out Rigidbody rigidBody)) {
+                Destroy(rigidBody);
+            }
+        }
+    }
+
+    private void UpdatePlayerPosition() {
+        Vector2 vF = new Vector2(Camera.main.transform.forward.x, Camera.main.transform.forward.z);
+        Vector2 vR = new Vector2(transform.forward.x, transform.forward.z);
+        vF.Normalize();
+        vR.Normalize();
+        float c = vF.x * vR.x + vF.y * vR.y;
+        float s = vF.x * vR.y - vF.y * vR.x;
+
+        double angle = ((s > 0) ? -1.0 : 1.0) * (180 / Math.PI) * Math.Acos(c) * parameters.precision;
+
+        List<int> p = converter.toGAMACRS(Camera.main.transform.position);
+        ConnectionManager.Instance.SendExecutableExpression("do move_player($id," + p[0] + "," + p[1] + "," + angle + ")");
+    }
+
+    private void InitAgentsList() {
+        agentMapList = new List<Dictionary<int, GameObject>>();
+        foreach (GameObject i in Agents) {
+            agentMapList.Add(new Dictionary<int, GameObject>());
+        }
+    }
+
+    private void UpdateAgentsList() {
+        // if (infoWorld.position.Count == 2) {
+        //     parameters.position = infoWorld.position;
+        //     playerPositionUpdate = true; // Teleportation disabled
+        // }
+
+        foreach (Dictionary<int, GameObject> agentMap in agentMapList) {
+            foreach (GameObject obj in agentMap.Values) {
+                obj.SetActive(false);
+            }
+        }
+
+        foreach (AgentInfo pi in infoWorld.agents) {
+            int speciesIndex = pi.v[0];
+            GameObject Agent = Agents[speciesIndex];
+            int id = pi.v[1];
+            GameObject obj = null;
+            Dictionary<int, GameObject> agentMap = agentMapList[speciesIndex];
+
+            if (!agentMap.ContainsKey(id)) {
+                obj = Instantiate(Agent);
+                float scale = Sizefactor[speciesIndex];
+                obj.transform.localScale = new Vector3(scale, scale, scale);
+                obj.SetActive(true);
+                agentMap.Add(id, obj);
+            } else {
+                obj = agentMap[id];
+            }
+
+
+            Vector3 pos = converter.fromGAMACRS(pi.v[2], pi.v[3]);
+            pos.y = YValues[speciesIndex];
+            float rot = rotationsCoeff[speciesIndex] * (pi.v[4] / parameters.precision) + rotations[speciesIndex];
+            obj.transform.SetPositionAndRotation(pos, Quaternion.AngleAxis(rot, Vector3.up));
+            obj.SetActive(true);
+        } 
+        
+        foreach (Dictionary<int, GameObject> agentMap in agentMapList) {
+            List<int> ids = new List<int>(agentMap.Keys);
+            foreach (int id in ids) {
+                GameObject obj = agentMap[id];
+                if (!obj.activeSelf) {
+                    obj.transform.position = new Vector3(0, -100, 0);
+                    agentMap.Remove(id);
+                    GameObject.Destroy(obj);
+                }
+            }
+        }
     }
 }
 
 // ############################################################
 
 public enum GameState {
+    // not connected to middleware
     MENU,
+    // connected to middleware, waiting for authentication
+    WAITING,
+    // connected to middleware, authenticated, waiting for initial data from middleware
+    LOADING_DATA,
+    // connected to middleware, authenticated, initial data received, simulation running
     GAME,
     END,
-    CRASH,
-    PENDING // Waiting for incoming init data from GAMA
+    CRASH
 }
 
