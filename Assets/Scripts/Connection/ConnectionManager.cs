@@ -57,9 +57,8 @@ public class ConnectionManager : WebSocketConnector
                 break;
         }
 
-        OnConnectionStateChange?.Invoke(newState);
-
         currentState = newState;
+        OnConnectionStateChange?.Invoke(newState);        
     }
 
     // ################################## HANDLERS ###############################################
@@ -92,8 +91,8 @@ public class ConnectionManager : WebSocketConnector
 
                     if (authenticated && connected)  {
                         if (!IsConnectionState(ConnectionState.AUTHENTICATED)) {
-                            Debug.Log("ConnectionManager: Successfully authenticated");
                             UpdateConnectionState(ConnectionState.AUTHENTICATED);
+                            Debug.Log("ConnectionManager: Successfully authenticated");
                         } else {
                             Debug.LogWarning("ConnectionManager: Already authenticated");
                         }
@@ -163,6 +162,11 @@ public class ConnectionManager : WebSocketConnector
                 Debug.LogError("ConnectionManager: Failed to send executable expression");
             }
         }));
+    }
+
+
+    public string GetConnectionId() {
+        return id_vr;
     }
 
 }

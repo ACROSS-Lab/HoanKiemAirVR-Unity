@@ -112,6 +112,7 @@ public class GameManager : MonoBehaviour
 
             case GameState.LOADING_DATA:
                 Debug.Log("GameManager: UpdateGameState -> LOADING_DATA");
+                ConnectionManager.Instance.SendExecutableExpression("do init_player(" + ConnectionManager.Instance.GetConnectionId() + ")");
                 break;
 
             case GameState.GAME:
@@ -167,12 +168,11 @@ public class GameManager : MonoBehaviour
 
     private void HandleServerMessageReceived(JObject jsonObj) {
         string firstKey = jsonObj.Properties().Select(p => p.Name).FirstOrDefault();
-        Debug.Log(jsonObj.ToString());
+        Debug.Log(firstKey);
         switch (firstKey) {
 
             // handle general informations about the simulation
             case "precision":
-                
                 parameters = ConnectionParameter.CreateFromJSON(jsonObj.ToString());
                 converter = new CoordinateConverter(parameters.precision, GamaCRSCoefX, GamaCRSCoefY, GamaCRSCoefY, GamaCRSOffsetX, GamaCRSOffsetY, GamaCRSOffsetZ);
                 simulationParametersReceived = true;
