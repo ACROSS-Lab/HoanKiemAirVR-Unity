@@ -15,10 +15,6 @@ public class GameManager : MonoBehaviour
     [SerializeField] private TMPro.TextMeshProUGUI infoText;
     [SerializeField] private GameState currentState;
 
-    [Header("Expected initial parameters")]
-    [SerializeField] private bool geometriesExpected = true;
-    [SerializeField] private bool simulationInfosExpected = true;
-
     //optional: rotation, Y-translation and Size scale to apply to the prefabs correspoding to the different species of agents
     [SerializeField] private List<float> rotations = new List<float> { 90.0f, 90.0f, 0.0f };
     [SerializeField] private List<float> rotationsCoeff = new List<float> { 1, 1, 0.0f };
@@ -46,19 +42,23 @@ public class GameManager : MonoBehaviour
     public static event Action<GameState> OnGameStateChanged;
     public static event Action OnGameRestarted;
     public static event Action<GAMAGeometry> OnGeometriesInitialized;
-    public static event Action<ConnectionParameter> OnSimulationParametersReceived;
     public static event Action<WorldJSONInfo> OnWorldDataReceived;
 
     private Timer timer;
     private List<Dictionary<int, GameObject>> agentMapList;
 
     private bool geometriesInitialized;
-    private bool simulationParametersReceived;
+    private bool simulationParametersHandled;
+
+    private bool handleGroundRequested;
+    private bool handlePlayerRequested;
+    private bool handleGeometriesRequested;
 
     private CoordinateConverter converter;
     private PolygonGenerator polyGen;
     private ConnectionParameter parameters;
     private WorldJSONInfo infoWorld;
+    private GAMAGeometry gamaGeometry;
 
     public static GameManager Instance = null;
 
@@ -85,13 +85,33 @@ public class GameManager : MonoBehaviour
         InitAgentsList();
         timer = GetComponent<Timer>();
         geometriesInitialized = false;
-        simulationParametersReceived = false;
+        simulationParametersHandled = false;
+        handleGroundRequested = false;
+        handlePlayerRequested = false;
+        handleGeometriesRequested = false;
     }
 
     void FixedUpdate() {
         if(IsGameState(GameState.GAME)) {
             UpdatePlayerPosition();
             UpdateAgentsList();
+        }
+    }
+
+    void LateUpdate() {
+        if (handleGroundRequested && !simulationParametersHandled) {
+            InitGroundParameters();
+            handleGroundRequested = false;
+        }
+
+        if (handlePlayerRequested && !simulationParametersHandled) {
+            InitPlayerParameters();
+            handlePlayerRequested = false;
+        }
+
+        if (handleGeometriesRequested && !simulationParametersHandled) {
+            InitGeometries();
+            handleGeometriesRequested = false;
         }
     }
 
@@ -112,7 +132,7 @@ public class GameManager : MonoBehaviour
 
             case GameState.LOADING_DATA:
                 Debug.Log("GameManager: UpdateGameState -> LOADING_DATA");
-                ConnectionManager.Instance.SendExecutableExpression("do init_player(" + ConnectionManager.Instance.GetConnectionId() + ")");
+                ConnectionManager.Instance.SendExecutableExpression("do init_player(\"" + ConnectionManager.Instance.GetConnectionId() + "\");");
                 break;
 
             case GameState.GAME:
@@ -135,7 +155,6 @@ public class GameManager : MonoBehaviour
                 Debug.Log("GameManager: UpdateGameState -> UNKNOWN");
                 break;
         }
-
         
         currentState = newState;
         OnGameStateChanged?.Invoke(currentState);
@@ -162,55 +181,47 @@ public class GameManager : MonoBehaviour
     private void HandleConnectionStateChange(ConnectionState state) {
         // player has been added to the simulation by the middleware
         if (state == ConnectionState.AUTHENTICATED) {
+            Debug.Log("GameManager: Player added to simulation, waiting for initial parameters");
             UpdateGameState(GameState.LOADING_DATA);
         }
     }
 
     private void HandleServerMessageReceived(JObject jsonObj) {
         string firstKey = jsonObj.Properties().Select(p => p.Name).FirstOrDefault();
-        Debug.Log(firstKey);
-        switch (firstKey) {
+        // Debug.Log(firstKey);
 
+        switch (firstKey) {
             // handle general informations about the simulation
             case "precision":
                 parameters = ConnectionParameter.CreateFromJSON(jsonObj.ToString());
                 converter = new CoordinateConverter(parameters.precision, GamaCRSCoefX, GamaCRSCoefY, GamaCRSCoefY, GamaCRSOffsetX, GamaCRSOffsetY, GamaCRSOffsetZ);
-                simulationParametersReceived = true;
-                InitGroundParameters();
-                InitPlayerParameters();
                 Debug.Log("GameManager: Received simulation parameters");
-                OnSimulationParametersReceived?.Invoke(parameters);
-                
+                // Init ground and player
+                handleGroundRequested = true;
+                handlePlayerRequested = true;                
             break;
 
             // handle geometries sent by GAMA at the beginning of the simulation
             case "points":
-                if (!simulationParametersReceived) {
-                    Debug.LogError("GameManager: Received geometries before simulation parameters");
-                    // TODO: handle error so that the simulation doesnt crash
-                    return;
-                } else {
-                    GAMAGeometry g = GAMAGeometry.CreateFromJSON(jsonObj.ToString());
-                    if (polyGen == null) {
-                        polyGen = PolygonGenerator.GetInstance();
-                        polyGen.Init(converter, offsetYBackgroundGeom);
-                    }
-                    polyGen.GeneratePolygons(g);
-                    geometriesInitialized = true;
-                    OnGeometriesInitialized?.Invoke(g);
-                    Debug.Log("GameManager: Received geometries");
+                gamaGeometry = GAMAGeometry.CreateFromJSON(jsonObj.ToString());
+                // Log the keys of jsonObj
+                foreach (JProperty property in jsonObj.Properties())
+                {
+                    Debug.Log(property.Name + " - " + property.Value);
                 }
+                Debug.Log("GameManager: Received geometries data, number of geometries");
+                handleGeometriesRequested = true;
             break;
 
-            // handle agents while simulation is running
-            case "agents":
-                infoWorld = WorldJSONInfo.CreateFromJSON(jsonObj.ToString());
-                OnWorldDataReceived?.Invoke(infoWorld);
-            break;
+            // // handle agents while simulation is running
+            // case "agents":
+            //     infoWorld = WorldJSONInfo.CreateFromJSON(jsonObj.ToString());
+            //     OnWorldDataReceived?.Invoke(infoWorld);
+            // break;
 
-            default:
-                Debug.LogError("GameManager: Received unknown message from middleware");
-                break;
+            // default:
+            //     Debug.LogError("GameManager: Received unknown message from middleware");
+            //     break;
         }
 
     }
@@ -218,8 +229,8 @@ public class GameManager : MonoBehaviour
     private void HandleConnectionAttempted(bool success) {
         if (success) {
             if(IsGameState(GameState.MENU)) {
-                UpdateGameState(GameState.WAITING);
                 Debug.Log("GameManager: Successfully connected to middleware");
+                UpdateGameState(GameState.WAITING);
             }
         } else {
             // stay in MENU state
@@ -247,15 +258,7 @@ public class GameManager : MonoBehaviour
         return currentState;
     }
 
-    public bool GeometriesExpected() {
-        return geometriesExpected;
-    }
-
-    public bool SimulationInfosExpected() {
-        return simulationInfosExpected;
-    }
-
-    // ############################################################
+    // ############################# INITIALIZERS ####################################
     private void InitPlayerParameters() {
         Vector3 pos = converter.fromGAMACRS(parameters.position[0], parameters.position[1]);
         player.transform.position = pos;
@@ -269,9 +272,15 @@ public class GameManager : MonoBehaviour
                 Destroy(rigidBody);
             }
         }
+        Debug.Log("GameManager: Player parameters initialized");
     }
 
+
     private void InitGroundParameters() {
+        if (Ground == null) {
+            Debug.LogError("GameManager: Ground not set");
+            return;
+        }
         Vector3 ls = converter.fromGAMACRS(parameters.world[0], parameters.world[1]);
         if (ls.z < 0)
             ls.z = -ls.z;
@@ -284,8 +293,29 @@ public class GameManager : MonoBehaviour
         ps.y = -groundY;
 
         Ground.transform.position = ps;
+        Debug.Log("GameManager: Ground parameters initialized");
     }
 
+    private void InitGeometries() {
+        if (polyGen == null) {
+            polyGen = PolygonGenerator.GetInstance();
+            polyGen.Init(converter, offsetYBackgroundGeom);
+        }
+        polyGen.GeneratePolygons(gamaGeometry);
+        geometriesInitialized = true;
+        OnGeometriesInitialized?.Invoke(gamaGeometry);
+        Debug.Log("GameManager: Geometries initialized");
+    }
+
+    private void InitAgentsList() {
+        agentMapList = new List<Dictionary<int, GameObject>>();
+        foreach (GameObject i in Agents) {
+            agentMapList.Add(new Dictionary<int, GameObject>());
+        }
+    }
+
+
+    // ############################## UPDATERS ##############################
     private void UpdatePlayerPosition() {
         Vector2 vF = new Vector2(Camera.main.transform.forward.x, Camera.main.transform.forward.z);
         Vector2 vR = new Vector2(transform.forward.x, transform.forward.z);
@@ -298,13 +328,6 @@ public class GameManager : MonoBehaviour
 
         List<int> p = converter.toGAMACRS(Camera.main.transform.position);
         ConnectionManager.Instance.SendExecutableExpression("do move_player($id," + p[0] + "," + p[1] + "," + angle + ")");
-    }
-
-    private void InitAgentsList() {
-        agentMapList = new List<Dictionary<int, GameObject>>();
-        foreach (GameObject i in Agents) {
-            agentMapList.Add(new Dictionary<int, GameObject>());
-        }
     }
 
     private void UpdateAgentsList() {

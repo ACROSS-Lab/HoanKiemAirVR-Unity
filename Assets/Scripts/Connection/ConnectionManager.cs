@@ -91,8 +91,8 @@ public class ConnectionManager : WebSocketConnector
 
                     if (authenticated && connected)  {
                         if (!IsConnectionState(ConnectionState.AUTHENTICATED)) {
+                            Debug.Log("ConnectionManager: Player successfully authenticated");
                             UpdateConnectionState(ConnectionState.AUTHENTICATED);
-                            Debug.Log("ConnectionManager: Successfully authenticated");
                         } else {
                             Debug.LogWarning("ConnectionManager: Already authenticated");
                         }
@@ -138,7 +138,7 @@ public class ConnectionManager : WebSocketConnector
             Debug.Log("ConnectionManager: Attempting to connect to middleware...");
             connectionRequested = true;
             UpdateConnectionState(ConnectionState.PENDING);
-            GetSocket().ConnectAsync();
+            GetSocket().Connect();
         } else {
             Debug.LogWarning("ConnectionManager: Already connected to middleware");
         }

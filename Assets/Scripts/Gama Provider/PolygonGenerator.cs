@@ -50,8 +50,16 @@ public class PolygonGenerator
             if (pt.c.Count < 2)
             {
                 if (pts.Count > 2)
-                {                    
-                    GameObject p = GeneratePolygon(pts.ToArray(), geom.names.Count > 0 ?  geom.names[cpt] : "", geom.tags.Count > 0 ?  geom.tags[cpt] : "", geom.heights[cpt], geom.hasColliders[cpt], geom.is3D[cpt]);
+                {              
+                    Debug.Log(cpt);
+                    Vector2[] MeshDataPoints = pts.ToArray();
+                    string name = geom.names.Count > 0 ?  geom.names[cpt] : "";
+                    string tag = geom.tags.Count > 0 ?  geom.tags[cpt] : "";
+                    float extrusionHeight = geom.heights[cpt];
+                    bool isUsingCollider = geom.hasColliders[cpt];
+                    bool is3D = geom.is3D[cpt];
+                    // GameObject p = GeneratePolygon(pts.ToArray(), geom.names.Count > 0 ?  geom.names[cpt] : "", geom.tags.Count > 0 ?  geom.tags[cpt] : "", geom.heights[cpt], geom.hasColliders[cpt], geom.is3D[cpt]);
+                    GameObject p = GeneratePolygon(MeshDataPoints, name, tag, extrusionHeight, isUsingCollider, is3D);
                     if (geom.is3D[cpt]) {
                         p.transform.SetParent(generated3D.transform);
                         geometriesMap3D.Add(id3D, p);
