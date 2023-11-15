@@ -11,51 +11,81 @@ public class BuildingManager : MonoBehaviour
     private float blendingCoefficient = 0.1f;
     private bool buildingsHandled;
     private Dictionary<int, GameObject> buildingsMap;
+    private WorldJSONInfo infoWorld;
+    private bool buildingsUpdateRequested;
     
     public static BuildingManager Instance = null;
 
-    // ############################################################
-
+    // ############################################ UNITY FUNCTIONS ############################################
     void Awake() {
         Instance = this;
     }
 
     void OnEnable() {
         GameManager.OnGeometriesInitialized += HandleGeometriesInitialized;
+        GameManager.OnWorldDataReceived += HandleWorldDataReceived;
     }
 
     void OnDisable() {
         GameManager.OnGeometriesInitialized -= HandleGeometriesInitialized;
+        GameManager.OnWorldDataReceived -= HandleWorldDataReceived;
     }
 
     void Start()
     {
         Debug.Log("BuildingManager started");
         buildingsHandled = false;
+        buildingsUpdateRequested = false;
     }
 
-    // void Update()
-    // {
-    //     if (!buildingsHandled && GameManager.Instance.IsGameState(GameState.WAITING)) InitBuildings();
-    // }
+    void LateUpdate() {
+        if (buildingsUpdateRequested) {
+            UpdateBuildingsPollution(infoWorld, buildingsMap);
+            buildingsUpdateRequested = false;
+        }
+    }
 
-    // ############################################################
-
-    // protected override void HandleGamaData(WorldJSONInfo infoWorld) {
-    //     UpdateBuildingsPollution(infoWorld, buildingsMap);
-    // }
-
-    // protected override void HandleGameStateChanged(GameState state) { }
-
-
-
-    // ############################################################
-
+    // ############################################ INITIALIZERS ############################################
     private void InitBuildings() {
         if (PolygonGenerator.GetInstance().GetGeneratedGeometries3D() != null) {
             buildingsMap = PolygonGenerator.GetInstance().GetGeneratedGeometries3D();
             HandleBuildings();
         }
+    }
+
+
+    // ############################################ UPDATERS ############################################
+    private void UpdateBuildingsPollution(WorldJSONInfo infoWorld, Dictionary<int, GameObject> buildings) {
+        float previousPollution;
+        float alpha;
+        foreach (BuildingInfo bi in infoWorld.buildings)
+        {
+            int id = bi.b[0];
+            float pollution = (float) bi.b[1];
+
+            GameObject building = null;
+            if (buildings.TryGetValue(id, out building)) {
+                if(building != null) {
+                    foreach (Transform childTransform in building.transform) {
+                        GameObject child = childTransform.gameObject;
+                        Material childMaterial = child.GetComponent<MeshRenderer>().material;
+                        previousPollution = buildingsHandled ? childMaterial.GetFloat("_Pollution_Level") : 0.0f;
+                        alpha = previousPollution != 0.0f ? blendingCoefficient : 1.0f;
+                        childMaterial.SetFloat("_Pollution_Level", (1.0f - alpha) * previousPollution + alpha * pollution);
+                    }
+                }                 
+            }
+        }
+    }
+
+    // ############################################ HANDLERS ############################################
+    private void HandleGeometriesInitialized(GAMAGeometry geoms) {
+        InitBuildings();
+    }
+
+    private void HandleWorldDataReceived(WorldJSONInfo infoWorld) {
+        this.infoWorld = infoWorld;
+        buildingsUpdateRequested = true;
     }
 
     private void HandleBuildings() {
@@ -84,29 +114,8 @@ public class BuildingManager : MonoBehaviour
         Debug.Log("Buildings handled"); 
     }
 
-    public void UpdateBuildingsPollution(WorldJSONInfo infoWorld, Dictionary<int, GameObject> buildings) {
-        float previousPollution;
-        float alpha;
-        foreach (BuildingInfo bi in infoWorld.buildings)
-        {
-            int id = bi.b[0];
-            float pollution = (float) bi.b[1];
-            GameObject building = null;
-            if (buildings.TryGetValue(id, out building))
-            {
-                if(building != null) {
-                    foreach (Transform childTransform in building.transform) {
-                        GameObject child = childTransform.gameObject;
-                        Material childMaterial = child.GetComponent<MeshRenderer>().material;
-                        previousPollution = buildingsHandled ? childMaterial.GetFloat("_Pollution_Level") : 0.0f;
-                        alpha = previousPollution != 0.0f ? blendingCoefficient : 1.0f;
-                        childMaterial.SetFloat("_Pollution_Level", (1.0f - alpha) * previousPollution + alpha * pollution);
-                    }
-                }                 
-            }
-        }
-    }
-
+    
+    // ############################################ UTILITY FUNCTIONS ############################################
     private bool InLakeArea(GameObject building) {
         Vector3 pos = building.transform.position;
         return (pos.x >= 595 && pos.x <= 650 && pos.z >= -855 && pos.z <= -650);
@@ -123,14 +132,6 @@ public class BuildingManager : MonoBehaviour
         float b = ya - a * xa;
         return pos.z < a * pos.x + b;
     }
-
-    // ############################################################
-
-    private void HandleGeometriesInitialized(GAMAGeometry geoms) {
-        InitBuildings();
-    }
-
-    // ############################################################
 
     public bool AreBuildingsHandled() {
         return buildingsHandled;

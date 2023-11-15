@@ -26,8 +26,7 @@ public class RoadManager : MonoBehaviour
 
     public static RoadManager Instance = null;
 
-    // ############################################################
-
+    // ############################################# UNITY FUNCTIONS #############################################
     void Awake() {
         Instance = this;
     }
@@ -59,7 +58,7 @@ public class RoadManager : MonoBehaviour
         }   
     }
 
-    // ############################################################
+    // ############################################# INITIALIZERS #############################################
 
     private void InitRoads() {
         GameObject[] roads = GameObject.FindGameObjectsWithTag("Road");
@@ -114,7 +113,7 @@ public class RoadManager : MonoBehaviour
         }     
     }
 
-    // ############################## EVENT HANDLERS ##############################
+    // ############################################# HANDLERS #############################################
     private void HandleHoverEnter(string roadName) {
         List<GameObject> roads = roadsDict[roadName];
         foreach (GameObject road in roads) {
@@ -163,11 +162,6 @@ public class RoadManager : MonoBehaviour
         }
     }
 
-    private void SendClosedRoads() {
-        string closedRoadsJSON = JsonConvert.SerializeObject(closedRoads);
-        ConnectionManager.Instance.SendExecutableExpression("do update_road_closed(" + closedRoadsJSON + ")");
-    }
-
     private void HandleGeometriesInitialized(GAMAGeometry data) {
         InitRoads();
     }
@@ -180,7 +174,12 @@ public class RoadManager : MonoBehaviour
     }
 
 
-    // ############################################################
+    // ############################################# UTILITY FUNCTIONS #############################################
+    private void SendClosedRoads() {
+        string closedRoadsJSON = JsonConvert.SerializeObject(closedRoads);
+        ConnectionManager.Instance.SendExecutableExpression("do update_road_closed(" + closedRoadsJSON + ")");
+    }
+
     public static List<string> GetClosedRoads() {
         return closedRoads;
     }

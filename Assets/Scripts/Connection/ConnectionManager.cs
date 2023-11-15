@@ -27,6 +27,7 @@ public class ConnectionManager : WebSocketConnector
 
     public static ConnectionManager Instance = null;
     
+    // ############################################# UNITY FUNCTIONS #############################################
     void Awake() {
         Instance = this;
     }
@@ -38,6 +39,7 @@ public class ConnectionManager : WebSocketConnector
     }
 
     
+    // ############################################# CONNECTION HANDLER #############################################
     public void UpdateConnectionState(ConnectionState newState) {
 
         switch(newState) {
@@ -61,7 +63,7 @@ public class ConnectionManager : WebSocketConnector
         OnConnectionStateChange?.Invoke(newState);        
     }
 
-    // ################################## HANDLERS ###############################################
+    // ############################################# HANDLERS #############################################
 
     protected override void HandleConnectionOpen(object sender, System.EventArgs e)
     {
@@ -93,11 +95,8 @@ public class ConnectionManager : WebSocketConnector
                         if (!IsConnectionState(ConnectionState.AUTHENTICATED)) {
                             Debug.Log("ConnectionManager: Player successfully authenticated");
                             UpdateConnectionState(ConnectionState.AUTHENTICATED);
-                        } else {
-                            // Debug.LogWarning("ConnectionManager: Already authenticated");
                         }
                         
-
                     } else if (connected && !authenticated) {
                         if(!IsConnectionState(ConnectionState.CONNECTED)) {
                             connectionRequested = false;
@@ -113,7 +112,6 @@ public class ConnectionManager : WebSocketConnector
 
                 case "json_simulation":
                     JObject content = (JObject) jsonObj["contents"];
-                    // Debug.Log("ConnectionManager: Content received -> " + content.ToString());
                     OnServerMessageReceived?.Invoke(content);
                     break;
 
@@ -133,6 +131,7 @@ public class ConnectionManager : WebSocketConnector
         UpdateConnectionState(ConnectionState.DISCONNECTED);
     }
 
+    // ############################################# UTILITY FUNCTIONS #############################################
     public void TryConnectionToServer() {
         if(IsConnectionState(ConnectionState.DISCONNECTED)) {
             Debug.Log("ConnectionManager: Attempting to connect to middleware...");
@@ -156,20 +155,18 @@ public class ConnectionManager : WebSocketConnector
         };
         string jsonStringExpression = JsonConvert.SerializeObject(jsonExpression);
         SendMessageToServer(jsonStringExpression, new Action<bool>((success) => {
-            if (success) {
-                Debug.Log("ConnectionManager: Executable expression sent to middelware");
-            } else {
+            if (!success) {
                 Debug.LogError("ConnectionManager: Failed to send executable expression");
             }
         }));
     }
-
 
     public string GetConnectionId() {
         return id_vr;
     }
 
 }
+
 
 public enum ConnectionState {
     DISCONNECTED,

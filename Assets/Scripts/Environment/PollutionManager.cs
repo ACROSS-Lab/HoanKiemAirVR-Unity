@@ -30,20 +30,18 @@ public class PollutionManager : MonoBehaviour
     private bool updateFogRequested;
     private GameState currentState = GameState.MENU;
 
-    // ############################################################
 
+    // ############################################# UNITY FUNCTIONS #############################################
     void Awake() {
         Instance = this;
     }
 
     void OnEnable() {
         GameManager.OnWorldDataReceived += HandleWorldDataReceived;
-        // GameManager.OnGameStateChanged += HandleGameStateChanged;
     }
 
     void OnDisable() {
         GameManager.OnWorldDataReceived -= HandleWorldDataReceived;
-        // GameManager.OnGameStateChanged -= HandleGameStateChanged;
     }
 
     void Start()
@@ -53,7 +51,6 @@ public class PollutionManager : MonoBehaviour
         fogDisplayOffset = 0.02f;
     }
 
-    // Update is called once per frame
     void Update()
     {
         if (transform.position.y > fadeStartingHeight) {
@@ -73,8 +70,7 @@ public class PollutionManager : MonoBehaviour
         }
     }
     
-    // ######################## EVENT HANDLERS ####################################
-
+    // ############################################# HANDLERS #############################################
     private void HandleGameStateChanged(GameState currentState) {
         this.currentState = currentState;
         updateFogRequested = true;
@@ -89,8 +85,7 @@ public class PollutionManager : MonoBehaviour
         SetLowPollutionArea(data.pAreaLow);
     }
 
-    // ############################################################
-
+    // ############################################# UTILITY FUNCTIONS #############################################
     public void SetFogPollutionLevel(int level) {
         pollutionLevel = level;
     }

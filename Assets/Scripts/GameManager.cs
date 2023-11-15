@@ -15,7 +15,7 @@ public class GameManager : MonoBehaviour
     [SerializeField] private TMPro.TextMeshProUGUI infoText;
     [SerializeField] private GameState currentState;
 
-    //optional: rotation, Y-translation and Size scale to apply to the prefabs correspoding to the different species of agents
+    // optional: rotation, Y-translation and Size scale to apply to the prefabs correspoding to the different species of agents
     [SerializeField] private List<float> rotations = new List<float> { 90.0f, 90.0f, 0.0f };
     [SerializeField] private List<float> rotationsCoeff = new List<float> { 1, 1, 0.0f };
     [SerializeField] private List<float> YValues = new List<float> { -0.9f, -0.9f, 0.15f };
@@ -39,9 +39,16 @@ public class GameManager : MonoBehaviour
 
     [SerializeField] private float minSimulationDuration = 10.0f;
 
+    // called when the current game state changes
     public static event Action<GameState> OnGameStateChanged;
+
+    // called when the game is restarted
     public static event Action OnGameRestarted;
+
+    // called when the geometries are initialized
     public static event Action<GAMAGeometry> OnGeometriesInitialized;
+
+    // called when the world data is received
     public static event Action<WorldJSONInfo> OnWorldDataReceived;
 
     private Timer timer;
@@ -62,8 +69,7 @@ public class GameManager : MonoBehaviour
 
     public static GameManager Instance = null;
 
-    // #############################################################
-
+    // ############################################ UNITY FUNCTIONS ############################################
     void Awake() {
         Instance = this;
     }
@@ -115,8 +121,7 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    // ############################################################
-    
+    // ############################################ GAMESTATE UPDATER ############################################
     public void UpdateGameState(GameState newState) {    
         
         switch(newState) {
@@ -160,98 +165,7 @@ public class GameManager : MonoBehaviour
         OnGameStateChanged?.Invoke(currentState);
     }
 
-    // ############################## HANDLERS ##############################
-
-    public void DisplayInfoText(string text, Color color) {
-        infoText.text = text;
-        infoText.color = color;
-    }
-
-    public void RemoveInfoText() {
-        DisplayInfoText("", new Color(0,0,0,0));
-    }    
-
-    public void RestartGame() {
-        OnGameRestarted?.Invoke();        
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
-    }
-
-    // ############################################## CONNECTION HANDLERS ########################################
-
-    private void HandleConnectionStateChange(ConnectionState state) {
-        // player has been added to the simulation by the middleware
-        if (state == ConnectionState.AUTHENTICATED) {
-            Debug.Log("GameManager: Player added to simulation, waiting for initial parameters");
-            UpdateGameState(GameState.LOADING_DATA);
-        }
-    }
-
-    private void HandleServerMessageReceived(JObject jsonObj) {
-        string firstKey = jsonObj.Properties().Select(p => p.Name).FirstOrDefault();
-        Debug.Log(jsonObj.ToString());
-
-        switch (firstKey) {
-            // handle general informations about the simulation
-            case "precision":
-                parameters = ConnectionParameter.CreateFromJSON(jsonObj.ToString());
-                converter = new CoordinateConverter(parameters.precision, GamaCRSCoefX, GamaCRSCoefY, GamaCRSCoefY, GamaCRSOffsetX, GamaCRSOffsetY, GamaCRSOffsetZ);
-                Debug.Log("GameManager: Received simulation parameters");
-                // Init ground and player
-                handleGroundRequested = true;
-                handlePlayerRequested = true;                
-            break;
-
-            // handle geometries sent by GAMA at the beginning of the simulation
-            case "points":
-                gamaGeometry = GAMAGeometry.CreateFromJSON(jsonObj.ToString());
-                Debug.Log("GameManager: Received geometries data");
-                handleGeometriesRequested = true;
-            break;
-
-            // handle agents while simulation is running
-            case "agents":
-                infoWorld = WorldJSONInfo.CreateFromJSON(jsonObj.ToString());
-                OnWorldDataReceived?.Invoke(infoWorld);
-            break;
-
-            default:
-                Debug.LogError("GameManager: Received unknown message from middleware");
-                break;
-        }
-
-    }
-
-    private void HandleConnectionAttempted(bool success) {
-        if (success) {
-            if(IsGameState(GameState.MENU)) {
-                Debug.Log("GameManager: Successfully connected to middleware");
-                UpdateGameState(GameState.WAITING);
-            }
-        } else {
-            // stay in MENU state
-            DisplayInfoText("Unable to connect to middleware", Color.red);
-        }
-    }
-
     
-
-    // ############################################################
-
-    public bool IsGameState(GameState state) {
-        return currentState == state;
-    }
-    
-    public Timer GetTimer() {
-        return timer;
-    }   
-
-    public float GetMinSimulationDuration() {
-        return minSimulationDuration;
-    }
-
-    public GameState GetCurrentState() {
-        return currentState;
-    }
 
     // ############################# INITIALIZERS ####################################
     private void InitPlayerParameters() {
@@ -312,7 +226,7 @@ public class GameManager : MonoBehaviour
     }
 
 
-    // ############################## UPDATERS ##############################
+    // ############################################ UPDATERS ############################################
     private void UpdatePlayerPosition() {
         Vector2 vF = new Vector2(Camera.main.transform.forward.x, Camera.main.transform.forward.z);
         Vector2 vR = new Vector2(transform.forward.x, transform.forward.z);
@@ -375,6 +289,91 @@ public class GameManager : MonoBehaviour
                 }
             }
         }
+    }
+
+    // ############################################# HANDLERS ########################################
+    private void HandleConnectionStateChange(ConnectionState state) {
+        // player has been added to the simulation by the middleware
+        if (state == ConnectionState.AUTHENTICATED) {
+            Debug.Log("GameManager: Player added to simulation, waiting for initial parameters");
+            UpdateGameState(GameState.LOADING_DATA);
+        }
+    }
+
+    private void HandleServerMessageReceived(JObject jsonObj) {
+        string firstKey = jsonObj.Properties().Select(p => p.Name).FirstOrDefault();
+        switch (firstKey) {
+            // handle general informations about the simulation
+            case "precision":
+                parameters = ConnectionParameter.CreateFromJSON(jsonObj.ToString());
+                converter = new CoordinateConverter(parameters.precision, GamaCRSCoefX, GamaCRSCoefY, GamaCRSCoefY, GamaCRSOffsetX, GamaCRSOffsetY, GamaCRSOffsetZ);
+                Debug.Log("GameManager: Received simulation parameters");
+                // Init ground and player
+                handleGroundRequested = true;
+                handlePlayerRequested = true;                
+            break;
+
+            // handle geometries sent by GAMA at the beginning of the simulation
+            case "points":
+                gamaGeometry = GAMAGeometry.CreateFromJSON(jsonObj.ToString());
+                Debug.Log("GameManager: Received geometries data");
+                handleGeometriesRequested = true;
+            break;
+
+            // handle agents while simulation is running
+            case "agents":
+                infoWorld = WorldJSONInfo.CreateFromJSON(jsonObj.ToString());                
+                OnWorldDataReceived?.Invoke(infoWorld);
+            break;
+
+            default:
+                Debug.LogError("GameManager: Received unknown message from middleware");
+                break;
+        }
+
+    }
+
+    private void HandleConnectionAttempted(bool success) {
+        if (success) {
+            if(IsGameState(GameState.MENU)) {
+                Debug.Log("GameManager: Successfully connected to middleware");
+                UpdateGameState(GameState.WAITING);
+            }
+        } else {
+            // stay in MENU state
+            DisplayInfoText("Unable to connect to middleware", Color.red);
+        }
+    }
+
+    // ############################################# UTILITY FUNCTIONS ########################################
+    public void DisplayInfoText(string text, Color color) {
+        infoText.text = text;
+        infoText.color = color;
+    }
+
+    public void RemoveInfoText() {
+        DisplayInfoText("", new Color(0,0,0,0));
+    }    
+
+    public void RestartGame() {
+        OnGameRestarted?.Invoke();        
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    }
+
+    public bool IsGameState(GameState state) {
+        return currentState == state;
+    }
+    
+    public Timer GetTimer() {
+        return timer;
+    }   
+
+    public float GetMinSimulationDuration() {
+        return minSimulationDuration;
+    }
+
+    public GameState GetCurrentState() {
+        return currentState;
     }
 }
 
