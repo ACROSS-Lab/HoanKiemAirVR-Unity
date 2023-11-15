@@ -324,7 +324,7 @@ public class GameManager : MonoBehaviour
         int angle = (int) (((s > 0) ? -1.0 : 1.0) * (180 / Math.PI) * Math.Acos(c) * parameters.precision);
 
         List<int> p = converter.toGAMACRS(Camera.main.transform.position);
-        ConnectionManager.Instance.SendExecutableExpression("do move_player_external($id," + p[0] + "," + p[1] + "," + angle + ")");
+        ConnectionManager.Instance.SendExecutableExpression("do move_player_external($id," + p[0] + "," + p[1] + "," + angle + ");");
     }
 
     private void UpdateAgentsList() {
