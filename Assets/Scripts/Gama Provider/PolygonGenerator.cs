@@ -51,7 +51,6 @@ public class PolygonGenerator
             {
                 if (pts.Count > 2)
                 {              
-                    Debug.Log(cpt);
                     Vector2[] MeshDataPoints = pts.ToArray();
                     string name = geom.names.Count > 0 ?  geom.names[cpt] : "";
                     string tag = geom.tags.Count > 0 ?  geom.tags[cpt] : "";

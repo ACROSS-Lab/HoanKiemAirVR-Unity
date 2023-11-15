@@ -188,7 +188,7 @@ public class GameManager : MonoBehaviour
 
     private void HandleServerMessageReceived(JObject jsonObj) {
         string firstKey = jsonObj.Properties().Select(p => p.Name).FirstOrDefault();
-        // Debug.Log(firstKey);
+        Debug.Log(jsonObj.ToString());
 
         switch (firstKey) {
             // handle general informations about the simulation
@@ -204,24 +204,19 @@ public class GameManager : MonoBehaviour
             // handle geometries sent by GAMA at the beginning of the simulation
             case "points":
                 gamaGeometry = GAMAGeometry.CreateFromJSON(jsonObj.ToString());
-                // Log the keys of jsonObj
-                foreach (JProperty property in jsonObj.Properties())
-                {
-                    Debug.Log(property.Name + " - " + property.Value);
-                }
-                Debug.Log("GameManager: Received geometries data, number of geometries");
+                Debug.Log("GameManager: Received geometries data");
                 handleGeometriesRequested = true;
             break;
 
-            // // handle agents while simulation is running
-            // case "agents":
-            //     infoWorld = WorldJSONInfo.CreateFromJSON(jsonObj.ToString());
-            //     OnWorldDataReceived?.Invoke(infoWorld);
-            // break;
+            // handle agents while simulation is running
+            case "agents":
+                infoWorld = WorldJSONInfo.CreateFromJSON(jsonObj.ToString());
+                OnWorldDataReceived?.Invoke(infoWorld);
+            break;
 
-            // default:
-            //     Debug.LogError("GameManager: Received unknown message from middleware");
-            //     break;
+            default:
+                Debug.LogError("GameManager: Received unknown message from middleware");
+                break;
         }
 
     }
@@ -304,6 +299,7 @@ public class GameManager : MonoBehaviour
         polyGen.GeneratePolygons(gamaGeometry);
         geometriesInitialized = true;
         OnGeometriesInitialized?.Invoke(gamaGeometry);
+        UpdateGameState(GameState.GAME);
         Debug.Log("GameManager: Geometries initialized");
     }
 
@@ -312,6 +308,7 @@ public class GameManager : MonoBehaviour
         foreach (GameObject i in Agents) {
             agentMapList.Add(new Dictionary<int, GameObject>());
         }
+        Debug.Log("GameManager: Agents list initialized. " + Agents.Count + " species found");
     }
 
 
@@ -324,10 +321,10 @@ public class GameManager : MonoBehaviour
         float c = vF.x * vR.x + vF.y * vR.y;
         float s = vF.x * vR.y - vF.y * vR.x;
 
-        double angle = ((s > 0) ? -1.0 : 1.0) * (180 / Math.PI) * Math.Acos(c) * parameters.precision;
+        int angle = (int) (((s > 0) ? -1.0 : 1.0) * (180 / Math.PI) * Math.Acos(c) * parameters.precision);
 
         List<int> p = converter.toGAMACRS(Camera.main.transform.position);
-        ConnectionManager.Instance.SendExecutableExpression("do move_player($id," + p[0] + "," + p[1] + "," + angle + ")");
+        ConnectionManager.Instance.SendExecutableExpression("do move_player_external($id," + p[0] + "," + p[1] + "," + angle + ")");
     }
 
     private void UpdateAgentsList() {

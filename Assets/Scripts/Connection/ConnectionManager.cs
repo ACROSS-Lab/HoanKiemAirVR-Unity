@@ -94,7 +94,7 @@ public class ConnectionManager : WebSocketConnector
                             Debug.Log("ConnectionManager: Player successfully authenticated");
                             UpdateConnectionState(ConnectionState.AUTHENTICATED);
                         } else {
-                            Debug.LogWarning("ConnectionManager: Already authenticated");
+                            // Debug.LogWarning("ConnectionManager: Already authenticated");
                         }
                         
 
