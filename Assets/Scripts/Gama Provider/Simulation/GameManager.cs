@@ -9,19 +9,21 @@ using Newtonsoft.Json.Linq;
 
 public class GameManager : MonoBehaviour
 {
+    [Header("Base GameObjects")]
     [SerializeField] private GameObject player;
     [SerializeField] private GameObject Ground;
     [SerializeField] private List<GameObject> Agents;
     [SerializeField] private TMPro.TextMeshProUGUI infoText;
-    [SerializeField] private GameState currentState;
 
     // optional: rotation, Y-translation and Size scale to apply to the prefabs correspoding to the different species of agents
+    [Header("Transformations applied to agents prefabs")]
     [SerializeField] private List<float> rotations = new List<float> { 90.0f, 90.0f, 0.0f };
     [SerializeField] private List<float> rotationsCoeff = new List<float> { 1, 1, 0.0f };
     [SerializeField] private List<float> YValues = new List<float> { -0.9f, -0.9f, 0.15f };
     [SerializeField] private List<float> Sizefactor = new List<float> { 0.3f, 0.3f, 1.0f }; 
 
     // optional: define a scale between GAMA and Unity for the location given
+    [Header("Coordinate conversion parameters")]
     [SerializeField] private float GamaCRSCoefX = 1.0f;
     [SerializeField] private float GamaCRSCoefY = 1.0f;
     [SerializeField] private float GamaCRSOffsetX = 0.0f;
@@ -37,6 +39,7 @@ public class GameManager : MonoBehaviour
     //Y-offset to apply to the background geometries
     [SerializeField] private float offsetYBackgroundGeom = 0.1f;
 
+    [Header("Simulation parameters")]
     [SerializeField] private float minSimulationDuration = 10.0f;
 
     // called when the current game state changes
@@ -66,6 +69,8 @@ public class GameManager : MonoBehaviour
     private ConnectionParameter parameters;
     private WorldJSONInfo infoWorld;
     private GAMAGeometry gamaGeometry;
+
+    private GameState currentState;
 
     public static GameManager Instance = null;
 

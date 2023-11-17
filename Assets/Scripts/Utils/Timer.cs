@@ -5,11 +5,14 @@ using UnityEngine;
 public class Timer : MonoBehaviour
 {
 
+    [Header("Display Settings")]
     [SerializeField] private TMPro.TextMeshProUGUI timerText;
-    [SerializeField] private float timerDuration = 30.0f;
-    [SerializeField] private Color startColor;
-    [SerializeField] private Color midColor;
-    [SerializeField] private Color endColor;
+    [SerializeField] private Color startColor = new Color(0,201,0,255);
+    [SerializeField] private Color midColor = new Color(255,218,0,255);
+    [SerializeField] private Color endColor = new Color(255,0,0,255);
+    
+    [Header("Timer settings")]
+    [SerializeField] private float timerDuration = 10.0f;
     
     private bool timerRunning;
     private float midTime;
@@ -18,6 +21,11 @@ public class Timer : MonoBehaviour
     // ############################################################
 
     void Start() {
+        if (PlayerPrefs.GetFloat("TIMER") != 0.0) {
+            timerDuration = PlayerPrefs.GetFloat("TIMER");
+        } else {
+            PlayerPrefs.SetFloat("TIMER", timerDuration);
+        }
         timerRunning = false;
         timeRemaining = timerDuration;
         midTime = timerDuration / 2;
@@ -45,12 +53,15 @@ public class Timer : MonoBehaviour
         time += 1;
         float minutes = Mathf.FloorToInt(time / 60); 
         float seconds = Mathf.FloorToInt(time % 60);
-        timerText.text = string.Format("{0:00}:{1:00}", minutes, seconds);
-        if (time > midTime) {
-            timerText.color = Color.Lerp(midColor, startColor, (time - midTime) / midTime);
-        } else {
-            timerText.color = Color.Lerp(endColor, midColor, (time) / midTime);
+        if (timerText != null) {
+            timerText.text = string.Format("{0:00}:{1:00}", minutes, seconds);
+            if (time > midTime) {
+                timerText.color = Color.Lerp(midColor, startColor, (time - midTime) / midTime);
+            } else {
+                timerText.color = Color.Lerp(endColor, midColor, (time) / midTime);
+            }
         }
+        
     }
 
     public void Reset() {

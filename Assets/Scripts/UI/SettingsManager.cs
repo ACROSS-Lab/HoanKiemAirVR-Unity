@@ -13,8 +13,7 @@ public class OpenSettings : MonoBehaviour
 
     // ############################################################
 
-    void OnEnable()
-    {
+    void OnEnable() {
         toggleSettingsAction.action.Enable();
         toggleSettingsAction.action.performed += HandleSettingsVisivility;
         // GameManager.OnGameStateChanged += HandleGameStateChanged;

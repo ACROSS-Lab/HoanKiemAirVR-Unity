@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Timers;
@@ -6,13 +7,13 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-public class KeyAction : MonoBehaviour
+public class IpManager : MonoBehaviour
 {
-    public double delay = 2000;
-    private static System.Timers.Timer aTimer;
-    private TextMeshProUGUI playerTextOutput;
+    [SerializeField] private double delay = 2000;
 
+    private static System.Timers.Timer aTimer;
     private static bool ready = false;
+    private TextMeshProUGUI playerTextOutput;
 
 
     private static bool NotValid(string ip)
@@ -31,8 +32,7 @@ public class KeyAction : MonoBehaviour
     }
 
     // Start is called before the first frame update
-    void Start()
-    {
+    void Start() {
         string ip = PlayerPrefs.GetString("IP");
         if (NotValid(ip))
             ip = "127.0.0.1";
@@ -51,8 +51,7 @@ public class KeyAction : MonoBehaviour
     }
 
 
-    public void OnTriggerEnterBtn(Text text)
-    {
+    public void OnTriggerEnterBtn(Text text) {
         string t = text.text;
 
         if (ready)
@@ -62,11 +61,9 @@ public class KeyAction : MonoBehaviour
         }
     }
 
-    public void OnTriggerEnterValidate()
-    {
+    public void OnTriggerEnterValidate() {
 
-        if (ready)
-        {
+        if (ready) {
             PlayerPrefs.SetString("IP", playerTextOutput.text);
             PlayerPrefs.Save();
         }
@@ -75,8 +72,7 @@ public class KeyAction : MonoBehaviour
     public void OnTriggerEnterCancel() {}
     
 
-    public void OnTriggerEnterDelete()
-    {
+    public void OnTriggerEnterDelete() {
 
         if (ready && playerTextOutput.text.Length > 0)
         {

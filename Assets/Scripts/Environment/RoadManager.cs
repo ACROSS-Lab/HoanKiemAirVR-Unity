@@ -177,7 +177,7 @@ public class RoadManager : MonoBehaviour
     // ############################################# UTILITY FUNCTIONS #############################################
     private void SendClosedRoads() {
         string closedRoadsJSON = JsonConvert.SerializeObject(closedRoads);
-        ConnectionManager.Instance.SendExecutableExpression("do update_road_closed(" + closedRoadsJSON + ")");
+        ConnectionManager.Instance.SendExecutableExpression("do update_road_closed(" + closedRoadsJSON + ");");
     }
 
     public static List<string> GetClosedRoads() {
