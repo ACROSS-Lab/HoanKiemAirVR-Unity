@@ -16,17 +16,15 @@ public class PieChart : MonoBehaviour
     void Start()
     {
         totalAmount = ComputeTotalAmount();
-        if (GameManager.Instance.IsState(GameState.END)) {
+        if (GameManager.Instance.IsGameState(GameState.END)) {
             totalAmount = ComputeTotalAmount();
             float[] vals = {PollutionManager.Instance.GetLowPollutionArea(), PollutionManager.Instance.GetMidPollutionArea(), PollutionManager.Instance.GetHighPollutionArea()};
             ConvertValuesToPie(vals);
         }
     }
 
-    void Update()
-    {
-        if (GameManager.Instance.IsState(GameState.GAME))
-        {
+    void Update() {
+        if (GameManager.Instance.IsGameState(GameState.GAME)) {
             totalAmount = ComputeTotalAmount();
             float[] vals = {PollutionManager.Instance.GetLowPollutionArea(), PollutionManager.Instance.GetMidPollutionArea(), PollutionManager.Instance.GetHighPollutionArea()};
             ConvertValuesToPie(vals);

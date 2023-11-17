@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System;
 using UnityEngine;
 
-public class PollutionManager : GameListener
+public class PollutionManager : MonoBehaviour
 {
     
     [SerializeField] private GameObject fogPlane;
@@ -27,10 +27,21 @@ public class PollutionManager : GameListener
     // Fog gets always displayed even though pollution level is 0
     private float fogDisplayOffset;   
 
-    // ############################################################
+    private bool updateFogRequested;
+    private GameState currentState = GameState.MENU;
 
+
+    // ############################################# UNITY FUNCTIONS #############################################
     void Awake() {
         Instance = this;
+    }
+
+    void OnEnable() {
+        GameManager.OnWorldDataReceived += HandleWorldDataReceived;
+    }
+
+    void OnDisable() {
+        GameManager.OnWorldDataReceived -= HandleWorldDataReceived;
     }
 
     void Start()
@@ -40,7 +51,6 @@ public class PollutionManager : GameListener
         fogDisplayOffset = 0.02f;
     }
 
-    // Update is called once per frame
     void Update()
     {
         if (transform.position.y > fadeStartingHeight) {
@@ -52,10 +62,21 @@ public class PollutionManager : GameListener
         float currentAlpha = (((float) pollutionLevel) / maxPollutionLevel) * 1.68f;
         fogMaterial.SetFloat("_Color_Alpha", blendingCoef * previousAlpha + (1 - blendingCoef) * currentAlpha + fogDisplayOffset);
     }
-    
-    // ############################################################
 
-    protected override void HandleGamaData(WorldJSONInfo data) {
+    void LateUpdate() {
+        if (updateFogRequested) {
+            fogPlane.SetActive(currentState == GameState.MENU);
+            updateFogRequested = false;
+        }
+    }
+    
+    // ############################################# HANDLERS #############################################
+    private void HandleGameStateChanged(GameState currentState) {
+        this.currentState = currentState;
+        updateFogRequested = true;
+    }
+
+    private void HandleWorldDataReceived(WorldJSONInfo data) {
         SetFogPollutionLevel(data.pollution);
         SetAQIMean(data.aqimean);
         SetAQIStd(data.aqistd);
@@ -64,12 +85,7 @@ public class PollutionManager : GameListener
         SetLowPollutionArea(data.pAreaLow);
     }
 
-    protected override void HandleGameStateChanged(GameState currentState) {
-        fogPlane.SetActive(currentState == GameState.MENU);
-    }
-
-    // ############################################################
-
+    // ############################################# UTILITY FUNCTIONS #############################################
     public void SetFogPollutionLevel(int level) {
         pollutionLevel = level;
     }

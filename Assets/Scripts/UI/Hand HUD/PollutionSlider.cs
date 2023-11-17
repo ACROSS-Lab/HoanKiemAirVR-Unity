@@ -15,7 +15,7 @@ public class PollutionSlider : MonoBehaviour
     {
         pollutionSlider.value = 0.0f;
 
-        if (GameManager.Instance.IsState(GameState.END)) {
+        if (GameManager.Instance.IsGameState(GameState.END)) {
             pollutionSlider.value = PollutionManager.Instance.GetAQIMean();
             pollutionSlider.interactable = false;
         }
@@ -23,7 +23,7 @@ public class PollutionSlider : MonoBehaviour
 
     void Update()
     {
-        if (GameManager.Instance.IsState(GameState.GAME)) 
+        if (GameManager.Instance.IsGameState(GameState.GAME)) 
         {
             pollutionSlider.value = PollutionManager.Instance.GetAQIMean();
         } 

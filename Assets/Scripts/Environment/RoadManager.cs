@@ -4,8 +4,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.XR.Interaction.Toolkit;
+using Newtonsoft.Json;
 
-public class RoadManager : GameListener
+public class RoadManager : MonoBehaviour
 {
 
     [SerializeField] private InputActionReference selectAction;
@@ -25,10 +26,19 @@ public class RoadManager : GameListener
 
     public static RoadManager Instance = null;
 
-    // ############################################################
-
+    // ############################################# UNITY FUNCTIONS #############################################
     void Awake() {
         Instance = this;
+    }
+
+    void OnEnable() {
+        GameManager.OnGeometriesInitialized += HandleGeometriesInitialized;
+        GameManager.OnWorldDataReceived += HandleWorldDataReceived;
+    }
+
+    void OnDisable() {
+        GameManager.OnGeometriesInitialized -= HandleGeometriesInitialized;
+        GameManager.OnWorldDataReceived -= HandleWorldDataReceived;
     }
 
     void Start()
@@ -37,16 +47,18 @@ public class RoadManager : GameListener
         roadsDict = new Dictionary<string, List<GameObject>>();
         closedRoads = new List<string>();
         roadClosedDist = 0.0f;
-        Debug.Log("Roads started");
+        Debug.Log("RoadManager started");
     }
 
     void Update()
     {   
-        if (!roadsInitialized && GameManager.Instance.IsState(GameState.PENDING)) InitRoads();
-        HandleRoadsInteraction();     
+        // if (!roadsInitialized && GameManager.Instance.IsGameState(GameState.WAITING)) InitRoads();
+        if(GameManager.Instance.IsGameState(GameState.GAME)) {
+            HandleRoadsInteraction();
+        }   
     }
 
-    // ############################################################
+    // ############################################# INITIALIZERS #############################################
 
     private void InitRoads() {
         GameObject[] roads = GameObject.FindGameObjectsWithTag("Road");
@@ -101,7 +113,7 @@ public class RoadManager : GameListener
         }     
     }
 
-    // ############################## EVENT HANDLERS ##############################
+    // ############################################# HANDLERS #############################################
     private void HandleHoverEnter(string roadName) {
         List<GameObject> roads = roadsDict[roadName];
         foreach (GameObject road in roads) {
@@ -145,21 +157,28 @@ public class RoadManager : GameListener
                             child.GetComponent<MeshRenderer>().material.SetInt("_Closed", 0);
                         }
                 }
-                
+                SendClosedRoads();
             }
         }
     }
 
-    protected override void HandleGamaData(WorldJSONInfo infoWorld) {
+    private void HandleGeometriesInitialized(GAMAGeometry data) {
+        InitRoads();
+    }
+
+    private void HandleWorldDataReceived(WorldJSONInfo infoWorld) {
         if (infoWorld.roadClosedDist != roadClosedDist) {
             SetRoadClosedDist(infoWorld.roadClosedDist);
             OnClosedRoadDistanceUpdated?.Invoke(roadClosedDist);
         }
     }
 
-    protected override void HandleGameStateChanged(GameState state) { }
 
-    // ############################################################
+    // ############################################# UTILITY FUNCTIONS #############################################
+    private void SendClosedRoads() {
+        string closedRoadsJSON = JsonConvert.SerializeObject(closedRoads);
+        ConnectionManager.Instance.SendExecutableExpression("do update_road_closed(" + closedRoadsJSON + ")");
+    }
 
     public static List<string> GetClosedRoads() {
         return closedRoads;
@@ -172,8 +191,6 @@ public class RoadManager : GameListener
     public bool AreRoadsInitialized() {
         return roadsInitialized;
     }
-
-
 
     public void SetRoadClosedDist(float dist) {
         roadClosedDist = dist;

@@ -17,8 +17,7 @@ public class Timer : MonoBehaviour
 
     // ############################################################
 
-    void Start()
-    {
+    void Start() {
         timerRunning = false;
         timeRemaining = timerDuration;
         midTime = timerDuration / 2;
@@ -33,7 +32,7 @@ public class Timer : MonoBehaviour
             } else {
                 timerRunning = false;
                 timeRemaining = 0;
-                GameManager.Instance.UpdateState(GameState.END);
+                GameManager.Instance.UpdateGameState(GameState.END);
             }
         } else {
             timeRemaining = timerDuration;
