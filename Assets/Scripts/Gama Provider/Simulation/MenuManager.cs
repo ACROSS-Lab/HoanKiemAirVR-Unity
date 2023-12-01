@@ -2,25 +2,15 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class MenuManager : MonoBehaviour
-{
+public class MenuManager : MonoBehaviour {
     
-    [SerializeField] private GameObject startOverlay;
-    [SerializeField] private GameObject ingameOverlay;
-    [SerializeField] private GameObject endOverlay;
-    [SerializeField] private GameObject crashOverlay;
-    [SerializeField] private GameObject waitingOverlay;
-    [SerializeField] private GameObject loadingDataOverlay;
-
-    [SerializeField] private Dictionary<GameState, List<GameObject>> overlays;
-    [SerializeField] private GameObject handHud;
-
-    private bool updateRequested;
-    private GameState curentState;
+    [SerializeField] private List<GameObject> allOverlays;
+    [SerializeField] private List<GameState> associatedGameStates;
 
     void Start() {
-        updateRequested = true;
-        curentState = GameState.MENU;
+        if (allOverlays.Count != associatedGameStates.Count) {
+            Debug.LogError("MenuManager: All Overlays and Associated Game States must have the same length");
+        }
     }
     
     void OnEnable() {
@@ -31,22 +21,14 @@ public class MenuManager : MonoBehaviour
         GameManager.OnGameStateChanged -= HandleGameStateChange;
     }
 
-    void LateUpdate() {
-        if (updateRequested) {
-            startOverlay.SetActive(curentState == GameState.MENU);
-            waitingOverlay.SetActive(curentState == GameState.WAITING);
-            loadingDataOverlay.SetActive(curentState == GameState.LOADING_DATA);
-            ingameOverlay.SetActive(curentState == GameState.GAME);
-            handHud.SetActive(curentState == GameState.GAME);
-            endOverlay.SetActive(curentState == GameState.END);
-            crashOverlay.SetActive(curentState == GameState.CRASH);
-            updateRequested = false;
-        }
-    }
-
     private void HandleGameStateChange(GameState newState) {
-        Debug.Log("MenuManager: HandleGameStateChange -> " + newState);
-        updateRequested = true;
-        curentState = newState; 
+        for (int i = 0; i < allOverlays.Count; i++) {
+            if (associatedGameStates[i] == newState) {
+                allOverlays[i].SetActive(true);
+            } else {
+                allOverlays[i].SetActive(false);
+            }
+        }
     }   
+    
 }

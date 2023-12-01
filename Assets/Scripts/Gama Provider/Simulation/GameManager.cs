@@ -6,6 +6,7 @@ using UnityEngine.SceneManagement;
 using Unity.Collections;
 using System.Linq;
 using Newtonsoft.Json.Linq;
+using System.Threading.Tasks;
 
 public class GameManager : MonoBehaviour
 {
@@ -31,7 +32,7 @@ public class GameManager : MonoBehaviour
 
     // Z offset and scale
     [SerializeField] private float GamaCRSOffsetZ = 180.0f;
-    [SerializeField] private float GamaCRSCoefZ = 1.0f;
+    // [SerializeField] private float GamaCRSCoefZ = 1.0f;
 
     //Y scale for the ground
     [SerializeField] private float groundY = 1.0f;
@@ -57,11 +58,11 @@ public class GameManager : MonoBehaviour
     private Timer timer;
     private List<Dictionary<int, GameObject>> agentMapList;
 
-    private bool geometriesInitialized;
+    // private bool geometriesInitialized;
     private bool simulationParametersHandled;
 
-    private bool handleGroundRequested;
-    private bool handlePlayerRequested;
+    // private bool handleGroundRequested;
+    // private bool handlePlayerRequested;
     private bool handleGeometriesRequested;
 
     private CoordinateConverter converter;
@@ -95,10 +96,10 @@ public class GameManager : MonoBehaviour
         UpdateGameState(GameState.MENU);
         InitAgentsList();
         timer = GetComponent<Timer>();
-        geometriesInitialized = false;
+        // geometriesInitialized = false;
         simulationParametersHandled = false;
-        handleGroundRequested = false;
-        handlePlayerRequested = false;
+        // handleGroundRequested = false;
+        // handlePlayerRequested = false;
         handleGeometriesRequested = false;
     }
 
@@ -110,15 +111,15 @@ public class GameManager : MonoBehaviour
     }
 
     void LateUpdate() {
-        if (handleGroundRequested && !simulationParametersHandled) {
-            InitGroundParameters();
-            handleGroundRequested = false;
-        }
+        // if (handleGroundRequested && !simulationParametersHandled) {
+        //     InitGroundParameters();
+        //     handleGroundRequested = false;
+        // }
 
-        if (handlePlayerRequested && !simulationParametersHandled) {
-            InitPlayerParameters();
-            handlePlayerRequested = false;
-        }
+        // if (handlePlayerRequested && !simulationParametersHandled) {
+        //     InitPlayerParameters();
+        //     handlePlayerRequested = false;
+        // }
 
         if (handleGeometriesRequested && !simulationParametersHandled) {
             InitGeometries();
@@ -216,7 +217,7 @@ public class GameManager : MonoBehaviour
             polyGen.Init(converter, offsetYBackgroundGeom);
         }
         polyGen.GeneratePolygons(gamaGeometry);
-        geometriesInitialized = true;
+        // geometriesInitialized = true;
         OnGeometriesInitialized?.Invoke(gamaGeometry);
         UpdateGameState(GameState.GAME);
         Debug.Log("GameManager: Geometries initialized");
@@ -305,7 +306,7 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    private void HandleServerMessageReceived(JObject jsonObj) {
+    private async void HandleServerMessageReceived(JObject jsonObj) {
         string firstKey = jsonObj.Properties().Select(p => p.Name).FirstOrDefault();
         switch (firstKey) {
             // handle general informations about the simulation
@@ -314,14 +315,17 @@ public class GameManager : MonoBehaviour
                 converter = new CoordinateConverter(parameters.precision, GamaCRSCoefX, GamaCRSCoefY, GamaCRSCoefY, GamaCRSOffsetX, GamaCRSOffsetY, GamaCRSOffsetZ);
                 Debug.Log("GameManager: Received simulation parameters");
                 // Init ground and player
-                handleGroundRequested = true;
-                handlePlayerRequested = true;                
+                await Task.Run(() => InitGroundParameters());
+                await Task.Run(() => InitPlayerParameters());
+                // handleGroundRequested = true;
+                // handlePlayerRequested = true;                
             break;
 
             // handle geometries sent by GAMA at the beginning of the simulation
             case "points":
                 gamaGeometry = GAMAGeometry.CreateFromJSON(jsonObj.ToString());
                 Debug.Log("GameManager: Received geometries data");
+                // await Task.Run(() => InitGeometries());
                 handleGeometriesRequested = true;
             break;
 

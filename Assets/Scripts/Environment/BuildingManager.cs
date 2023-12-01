@@ -13,6 +13,7 @@ public class BuildingManager : MonoBehaviour
     private Dictionary<int, GameObject> buildingsMap;
     private WorldJSONInfo infoWorld;
     private bool buildingsUpdateRequested;
+    // private bool buildingsUpdating;
     
     public static BuildingManager Instance = null;
 
@@ -35,13 +36,14 @@ public class BuildingManager : MonoBehaviour
     {
         Debug.Log("BuildingManager started");
         buildingsHandled = false;
+        // buildingsUpdating = false;
         buildingsUpdateRequested = false;
     }
 
-    void LateUpdate() {
+    void Update() {
         if (buildingsUpdateRequested) {
-            UpdateBuildingsPollution(infoWorld, buildingsMap);
             buildingsUpdateRequested = false;
+            UpdateBuildingsPollution(infoWorld, buildingsMap);
         }
     }
 

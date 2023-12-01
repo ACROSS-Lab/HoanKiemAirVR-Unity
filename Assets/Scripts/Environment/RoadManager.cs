@@ -41,8 +41,7 @@ public class RoadManager : MonoBehaviour
         GameManager.OnWorldDataReceived -= HandleWorldDataReceived;
     }
 
-    void Start()
-    {
+    void Start() {
         roadsInitialized = false;
         roadsDict = new Dictionary<string, List<GameObject>>();
         closedRoads = new List<string>();
@@ -50,9 +49,7 @@ public class RoadManager : MonoBehaviour
         Debug.Log("RoadManager started");
     }
 
-    void Update()
-    {   
-        // if (!roadsInitialized && GameManager.Instance.IsGameState(GameState.WAITING)) InitRoads();
+    void Update() {
         if(GameManager.Instance.IsGameState(GameState.GAME)) {
             HandleRoadsInteraction();
         }   
@@ -121,7 +118,6 @@ public class RoadManager : MonoBehaviour
             child.GetComponent<MeshRenderer>().material.SetInt("_Selected", 1);
 
             OnRoadInteracted?.Invoke(roadName, child.GetComponent<HKRoad>().closed);
-
         }
     }
 

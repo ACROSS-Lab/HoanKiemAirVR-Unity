@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System.Threading.Tasks;
 
 public class PolygonGenerator
 {
@@ -75,8 +76,6 @@ public class PolygonGenerator
             } else {
                 pts.Add(converter.fromGAMACRS2D(pt.c[0], pt.c[1]));
             }
-
-
         }
     }
 
