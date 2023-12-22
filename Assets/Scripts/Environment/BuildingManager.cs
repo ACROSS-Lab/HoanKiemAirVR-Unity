@@ -13,6 +13,7 @@ public class BuildingManager : MonoBehaviour
     private Dictionary<int, GameObject> buildingsMap;
     private WorldJSONInfo infoWorld;
     private bool buildingsUpdateRequested;
+    // private bool buildingsUpdating;
     
     public static BuildingManager Instance = null;
 
@@ -22,26 +23,27 @@ public class BuildingManager : MonoBehaviour
     }
 
     void OnEnable() {
-        GameManager.OnGeometriesInitialized += HandleGeometriesInitialized;
-        GameManager.OnWorldDataReceived += HandleWorldDataReceived;
+        SimulationManager.OnGeometriesInitialized += HandleGeometriesInitialized;
+        SimulationManager.OnWorldDataReceived += HandleWorldDataReceived;
     }
 
     void OnDisable() {
-        GameManager.OnGeometriesInitialized -= HandleGeometriesInitialized;
-        GameManager.OnWorldDataReceived -= HandleWorldDataReceived;
+        SimulationManager.OnGeometriesInitialized -= HandleGeometriesInitialized;
+        SimulationManager.OnWorldDataReceived -= HandleWorldDataReceived;
     }
 
     void Start()
     {
         Debug.Log("BuildingManager started");
         buildingsHandled = false;
+        // buildingsUpdating = false;
         buildingsUpdateRequested = false;
     }
 
-    void LateUpdate() {
+    void Update() {
         if (buildingsUpdateRequested) {
-            UpdateBuildingsPollution(infoWorld, buildingsMap);
             buildingsUpdateRequested = false;
+            UpdateBuildingsPollution(infoWorld, buildingsMap);
         }
     }
 

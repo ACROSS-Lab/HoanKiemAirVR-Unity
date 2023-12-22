@@ -16,7 +16,7 @@ public class MoveVertical  : InputData
    
     private void FixedUpdate()
     {
-        if (GameManager.Instance.IsGameState(GameState.GAME))
+        if (SimulationManager.Instance.IsGameState(GameState.GAME))
         {
             MoveVertially();
         }

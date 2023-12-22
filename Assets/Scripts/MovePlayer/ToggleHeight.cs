@@ -34,7 +34,7 @@ public class ToggleHeight : MonoBehaviour
     // ############################################################
 
     private void HandleToggleHeight(InputAction.CallbackContext obj) {
-        if (GameManager.Instance.IsGameState(GameState.GAME)) toggleHeight();
+        if (SimulationManager.Instance.IsGameState(GameState.GAME)) toggleHeight();
     }
 
     // ############################################################

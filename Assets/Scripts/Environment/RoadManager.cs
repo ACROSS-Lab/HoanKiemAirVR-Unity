@@ -32,17 +32,16 @@ public class RoadManager : MonoBehaviour
     }
 
     void OnEnable() {
-        GameManager.OnGeometriesInitialized += HandleGeometriesInitialized;
-        GameManager.OnWorldDataReceived += HandleWorldDataReceived;
+        SimulationManager.OnGeometriesInitialized += HandleGeometriesInitialized; 
+        SimulationManager.OnWorldDataReceived += HandleWorldDataReceived;
     }
 
     void OnDisable() {
-        GameManager.OnGeometriesInitialized -= HandleGeometriesInitialized;
-        GameManager.OnWorldDataReceived -= HandleWorldDataReceived;
+        SimulationManager.OnGeometriesInitialized -= HandleGeometriesInitialized;
+        SimulationManager.OnWorldDataReceived -= HandleWorldDataReceived;
     }
 
-    void Start()
-    {
+    void Start() {
         roadsInitialized = false;
         roadsDict = new Dictionary<string, List<GameObject>>();
         closedRoads = new List<string>();
@@ -50,10 +49,8 @@ public class RoadManager : MonoBehaviour
         Debug.Log("RoadManager started");
     }
 
-    void Update()
-    {   
-        // if (!roadsInitialized && GameManager.Instance.IsGameState(GameState.WAITING)) InitRoads();
-        if(GameManager.Instance.IsGameState(GameState.GAME)) {
+    void Update() {
+        if(SimulationManager.Instance.IsGameState(GameState.GAME)) {
             HandleRoadsInteraction();
         }   
     }
@@ -121,7 +118,6 @@ public class RoadManager : MonoBehaviour
             child.GetComponent<MeshRenderer>().material.SetInt("_Selected", 1);
 
             OnRoadInteracted?.Invoke(roadName, child.GetComponent<HKRoad>().closed);
-
         }
     }
 
@@ -177,7 +173,7 @@ public class RoadManager : MonoBehaviour
     // ############################################# UTILITY FUNCTIONS #############################################
     private void SendClosedRoads() {
         string closedRoadsJSON = JsonConvert.SerializeObject(closedRoads);
-        ConnectionManager.Instance.SendExecutableExpression("do update_road_closed(" + closedRoadsJSON + ")");
+        ConnectionManager.Instance.SendExecutableExpression("do update_road_closed(" + closedRoadsJSON + ");");
     }
 
     public static List<string> GetClosedRoads() {

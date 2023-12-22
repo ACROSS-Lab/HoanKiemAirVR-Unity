@@ -9,6 +9,7 @@ public class StartOverlay : MonoBehaviour
     [Header("Timer Settings")]
     [SerializeField] Slider timerSlider;
     [SerializeField] TMPro.TextMeshProUGUI sliderText;
+    
     [Header("Game Settings")]
     [SerializeField] TMPro.TextMeshProUGUI IPText;
     [SerializeField] Button startButton;
@@ -17,16 +18,13 @@ public class StartOverlay : MonoBehaviour
 
     // ############################################################
 
-    void Start()
-    {
+    void Start() {
         ip = PlayerPrefs.GetString("IP");
         timerSlider.onValueChanged.AddListener (delegate {HandleSliderChange();});
-        timerSlider.value = GameManager.Instance.GetTimer().GetTimerDuration();
+        timerSlider.value = SimulationManager.Instance.GetTimer().GetTimerDuration();
     }
 
-    void Update()
-    {
-        startButton.interactable = GameManager.Instance.GetTimer().GetTimerDuration() > GameManager.Instance.GetMinSimulationDuration();
+    void Update() {
         UpdateIPText();
     }
 
@@ -41,7 +39,7 @@ public class StartOverlay : MonoBehaviour
         float minutes = Mathf.FloorToInt(timerValue / 60); 
         float seconds = Mathf.FloorToInt(timerValue % 60);
         sliderText.text = string.Format("{0:00}:{1:00}", minutes, seconds);
-        GameManager.Instance.GetTimer().SetTimerDuration(timerValue);
+        SimulationManager.Instance.GetTimer().SetTimerDuration(timerValue);
     }
 
     // ############################################################
@@ -50,4 +48,6 @@ public class StartOverlay : MonoBehaviour
         ip = PlayerPrefs.GetString("IP");
         IPText.text = ip;
     }
+
+    
 }
